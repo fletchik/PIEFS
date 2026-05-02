@@ -1,0 +1,9 @@
+# CIFAR-10 binary classification (flat pixels, 3072 features)
+name: cifar10
+root: data/cifar10
+task: binary
+binary_classes: [0, 1]
+val_fraction: 0.1
+standardize: true
+input_dim: 3072
+num_classes: 2

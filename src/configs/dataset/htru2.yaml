@@ -1,0 +1,7 @@
+# HTRU2 pulsar detection (binary, 8 features)
+name: htru2
+root: data/htru2
+train_fraction: 0.7
+standardize: true
+input_dim: 8
+num_classes: 2

@@ -1,0 +1,13 @@
+# Spectral Dirichlet loss weights
+w_gram: 1.0        # ||C_k - I||_F^2 — orthogonality
+w_dirichlet: 1.0   # ||A(x)∇φ||² — MDE (Dirichlet energy)
+w_task: 1.0        # BCE or CE — supervised classification
+
+# Dynamic weighting (paper eq. 10)
+# w_task_eff  = w_task  * exp(-gram_error / t_orth)
+# w_mde_eff   = w_dirichlet * exp(-max(gram_error/t_orth, task_loss/t_class))
+# w_gram stays at w_gram always.
+# Set dynamic_weighting: true to match the paper. false = fixed weights (ablation).
+dynamic_weighting: true
+t_orth: 0.1    # target gram_error = ||C-I||_F; task loss activates below this
+t_class: 0.5   # target task loss (CE); Dirichlet activates when both are below targets

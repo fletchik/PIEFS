@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+logs/
+outputs/
+wandb/
+*.pt
+*.ckpt
+data/
+.hydra/
+articles/
+EFDO/

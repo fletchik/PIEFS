@@ -1,0 +1,44 @@
+defaults:
+  - _self_
+  - dataset: two_moon      # override via CLI: dataset=htru2
+  - criterion: spectral
+  - optimizer: adam
+
+hydra:
+  run:
+    dir: ${hydra:runtime.cwd}/logs/${run_id}
+  job:
+    chdir: false   # keep cwd at project root so 'src.' imports resolve
+
+run_id: ???   # required; set via CLI: run_id=exp01
+
+trainer:
+  total_steps: 60000         # fixed for all experiments
+  # steps_per_function is computed in train.py as total_steps // K
+  log_step: 15000            # log at 0, 15k, 30k, 45k, 60k
+  save_period: 30000         # checkpoint at 30k and 60k
+  batch_size: 256
+  device: auto               # "cpu", "cuda", or "auto"
+  seed: 42
+  skip_oom: true
+
+model:
+  K: 6                       # number of basis functions
+  hidden_dims: [64, 64, 64]  # BasisNet hidden layers
+  metric_type: 'off'         # quoted: bare 'off' is parsed as bool False in YAML
+  metric_hidden_dims: [64, 64]
+  task: binary               # "binary" or "multiclass"
+
+writer:
+  project_name: op-spectra-nn
+  mode: offline              # "online" | "offline" | "disabled"
+
+# Graph Laplacian pretraining (paper Section 2.4); false by default
+pretrain:
+  graph_laplacian: false
+  n_points: 1000
+  k_neighbors: 10
+  sigma: null
+  distill_steps: 2000
+  distill_lr: 0.001
+  update_t_class: true

@@ -1,0 +1,9 @@
+# MNIST binary 0-vs-1 classification (flat pixels, 784 features)
+name: mnist
+root: data/mnist
+task: binary
+binary_classes: [0, 1]
+val_fraction: 0.1
+standardize: true
+input_dim: 784
+num_classes: 2

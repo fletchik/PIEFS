@@ -1,0 +1,8 @@
+# MNIST 10-class unsupervised (NeuralEF protocol)
+name: mnist
+root: data/mnist
+task: multiclass
+val_fraction: 0.1
+standardize: true
+input_dim: 784
+num_classes: 10
