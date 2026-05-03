@@ -22,6 +22,16 @@ trainer:
   seed: 42
   skip_oom: true
 
+# Data augmentation (paper Sections 3-4, prevents overfitting of eigenfunctions)
+augmentation:
+  noise_std: 0.0             # Gaussian noise added to inputs: x -> x + eps, eps ~ N(0, sigma^2)
+                             # Paper: "perturbation of input values can prevent overfitting"
+                             # Recommended: 0.01-0.1 depending on dataset scale
+  wide_normal_fraction: 0.0  # Fraction of batch replaced by wide normal points
+                             # Paper: "addition of points from wide normal distribution
+                             #         increases the degree of eigenfunction smoothness"
+                             # Recommended: 0.1-0.3, sigma_wide auto-computed as 3x data_std
+
 model:
   K: 6                       # number of basis functions
   hidden_dims: [64, 64, 64]  # BasisNet hidden layers

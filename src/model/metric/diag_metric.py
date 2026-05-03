@@ -36,14 +36,17 @@ class DiagMetric(nn.Module):
         self.mlp = _make_mlp(input_dim, hidden_dims, input_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Return diagonal metric matrices for a batch.
+        """Return diagonal scaling vectors for a batch.
+
+        Returns λ(x) as a vector (B, d) rather than a full (B, d, d) matrix.
+        The loss uses Ag = λ ⊙ ∇φ (element-wise), which is equivalent to
+        diag(λ) @ ∇φ but avoids allocating a huge (B, d, d) tensor.
 
         Args:
             x: (B, d) input.
         Returns:
-            A: (B, d, d) diagonal metric matrices with det = 1.
+            lam: (B, d) diagonal scaling, det = 1 (Σ log λ_i = 0 by construction).
         """
         raw = self.mlp(x)  # (B, d)
         raw = raw - raw.mean(dim=1, keepdim=True)  # Σ raw_i = 0 ⟹ Σ log λ_i = 0
-        lam = torch.exp(raw)  # (B, d), positive, det = 1
-        return torch.diag_embed(lam)  # (B, d, d)
+        return torch.exp(raw)  # (B, d), positive, det = 1

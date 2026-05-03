@@ -147,6 +147,11 @@ def main(cfg: DictConfig) -> None:
     from src.trainer.sequential_trainer import SequentialTrainer
 
     checkpoint_dir = log_dir / run_id
+    # Augmentation config (paper Sections 3-4)
+    aug_cfg = cfg.get('augmentation', {})
+    noise_std = float(aug_cfg.get('noise_std', 0.0))
+    wide_normal_fraction = float(aug_cfg.get('wide_normal_fraction', 0.0))
+
     trainer = SequentialTrainer(
         model=model,
         criterion=criterion,
@@ -163,6 +168,8 @@ def main(cfg: DictConfig) -> None:
         device=device,
         skip_oom=cfg.trainer.skip_oom,
         config=project_config,
+        noise_std=noise_std,
+        wide_normal_fraction=wide_normal_fraction,
     )
 
     # ------------------------------------------------------------------

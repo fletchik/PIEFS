@@ -71,6 +71,8 @@ class SequentialTrainer:
         device: str = 'cpu',
         skip_oom: bool = True,
         config: dict | None = None,
+        noise_std: float = 0.0,
+        wide_normal_fraction: float = 0.0,
     ) -> None:
         self.model = model
         self.criterion = criterion
@@ -91,6 +93,8 @@ class SequentialTrainer:
         self.save_period = save_period
         self.device = device
         self.skip_oom = skip_oom
+        self.noise_std = noise_std
+        self.wide_normal_fraction = wide_normal_fraction
 
         # Accumulated metrics for result logging (keyed by global step).
         self._metrics_history: dict[int, dict] = {}
@@ -231,10 +235,42 @@ class SequentialTrainer:
             if (global_step + 1) % self.save_period == 0:
                 self._save_checkpoint(global_step + 1)
 
+    def _augment_batch(self, x: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Apply data augmentation from the paper (Sections 3-4).
+
+        Two augmentation techniques:
+        1. Noise perturbation: x -> x + eps, eps ~ N(0, noise_std^2)
+           Prevents overfitting where NN learns piecewise-constant functions
+           with zero gradient at data points.
+        2. Wide normal points: replace a fraction of the batch with samples
+           from N(0, 3*std(x)), with dummy labels.
+           Increases eigenfunction smoothness away from the data manifold.
+        """
+        # 1. Noise perturbation
+        if self.noise_std > 0:
+            x = x + torch.randn_like(x) * self.noise_std
+
+        # 2. Wide normal distribution points
+        if self.wide_normal_fraction > 0:
+            B = x.shape[0]
+            n_wide = max(1, int(B * self.wide_normal_fraction))
+            # Auto-compute sigma_wide as 3x data std
+            data_std = x.std(dim=0, keepdim=True).clamp(min=1e-6)
+            wide_points = torch.randn(n_wide, x.shape[1], device=x.device) * (3 * data_std)
+            wide_labels = torch.zeros(n_wide, dtype=y.dtype, device=y.device)
+            # Replace last n_wide entries (don't expand batch — keep memory stable)
+            x = torch.cat([x[:B - n_wide], wide_points], dim=0)
+            y = torch.cat([y[:B - n_wide], wide_labels], dim=0)
+
+        return x, y
+
     def _training_step(self, optimizer: Optimizer) -> dict[str, float]:
         batch = next(self.train_iter)
         x = batch['x'].to(self.device)
         y = batch['labels'].to(self.device)
+
+        # Apply augmentation (paper Sections 3-4)
+        x, y = self._augment_batch(x, y)
 
         optimizer.zero_grad()
         out = self.model(x, y)
@@ -366,6 +402,9 @@ class SequentialTrainer:
                 A = self.model.metric(x) if self.model.metric is not None else None
                 if A is None:
                     energy = (grad ** 2).mean().item()
+                elif A.dim() == 2:
+                    # Diagonal metric: element-wise multiply
+                    energy = ((A * grad) ** 2).sum(dim=1).mean().item()
                 else:
                     Ag = torch.bmm(A, grad.unsqueeze(-1)).squeeze(-1)
                     energy = (Ag ** 2).sum(dim=1).mean().item()  # ||A grad||²

@@ -173,18 +173,38 @@ class LambdaUPinn(nn.Module):
         cols = [self._pinn(x, eye[j].unsqueeze(0).expand(B, d)) for j in range(d)]
         return torch.stack(cols, dim=2)  # (B, d, d)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute A(x) = U_pinn(x) · Λ(x) for a batch.
+    def apply_to(self, x: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+        """Efficiently compute A(x)·v = U(x)·(Λ(x)·v) with ONE PINN call.
+
+        Key insight: instead of assembling U as a full (B, d, d) matrix
+        via d separate PINN calls, we compute:
+            w = Λ(x) · v   — element-wise multiply (O(Bd), free)
+            Av = PINN(x, w) — single forward pass gives U(x)·w  (O(B·d·h))
+
+        This is O(d) times faster than _get_U() + bmm.
+        Used by SpectralModel when metric_type='lambda_u_pinn'.
 
         Args:
-            x: (B, d)
+            x: (B, d) input points
+            v: (B, d) vectors to apply A to (e.g. gradient ∇φ)
         Returns:
-            A: (B, d, d)
+            Av: (B, d) = A(x)·v
+        """
+        raw = self._lam_mlp(x)
+        raw = raw - raw.mean(dim=1, keepdim=True)
+        lam = torch.exp(raw)      # (B, d)
+        w = lam * v               # Λ·v, element-wise
+        return self._pinn(x, w)   # U·w, one PINN call
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute A(x) = U_pinn(x) · Λ(x) as full (B, d, d) matrix.
+
+        Prefer apply_to() for efficiency in the loss computation.
+        This method is kept for compatibility (e.g. visualisation).
         """
         raw = self._lam_mlp(x)
         raw = raw - raw.mean(dim=1, keepdim=True)
         lam = torch.exp(raw)
         Lambda = torch.diag_embed(lam)  # (B, d, d)
-
-        U = self._get_U(x)  # (B, d, d)
+        U = self._get_U(x)             # (B, d, d), d PINN calls
         return torch.bmm(U, Lambda)

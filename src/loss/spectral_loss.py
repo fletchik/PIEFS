@@ -87,9 +87,18 @@ class SpectralDirichletLoss(nn.Module):
             off_diag_error_k = phi_matrix.new_zeros(())
 
         # Dirichlet energy: L_mde = mean ||A(x)∇φ||²  (paper eq. 5-6).
+        # A can be:
+        #   None       → identity metric: ||∇φ||²  (metric_type='off')
+        #   (B, d)     → diagonal metric: ||λ ⊙ ∇φ||²  (DiagMetric, fast)
+        #   (B, d, d)  → full matrix metric: ||A∇φ||²  (LambdaUSparse/Pinn)
         if A is None:
             loss_dirichlet = (grad_phi_k ** 2).mean()
+        elif A.dim() == 2:
+            # Diagonal case: Ag = λ ⊙ ∇φ  (element-wise, no bmm needed)
+            Ag = A * grad_phi_k  # (B, d)
+            loss_dirichlet = (Ag ** 2).sum(dim=1).mean()
         else:
+            # Full matrix case: Ag = A ∇φ
             Ag = torch.bmm(A, grad_phi_k.unsqueeze(-1)).squeeze(-1)  # (B, d)
             loss_dirichlet = (Ag ** 2).sum(dim=1).mean()  # ||A∇φ||²
 

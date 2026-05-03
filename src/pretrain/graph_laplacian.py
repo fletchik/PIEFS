@@ -117,11 +117,14 @@ class GraphLaplacianPretrain:
         idx = np.random.choice(N, size=min(self.n_points, N), replace=False)
         X_list, y_list = [], []
         for i in idx:
-            sample = dataset[i]
-            x = sample['x'] if isinstance(sample, dict) else sample[0]
-            y = sample['y'] if isinstance(sample, dict) else sample[1]
+            sample = dataset[int(i)]
+            if isinstance(sample, dict):
+                x = sample['x']
+                y = sample.get('label', sample.get('y', 0))
+            else:
+                x, y = sample[0], sample[1]
             X_list.append(x.numpy() if hasattr(x, 'numpy') else np.array(x))
-            y_list.append(int(y) if hasattr(y, 'item') else int(y))
+            y_list.append(int(y.item()) if hasattr(y, 'item') else int(y))
 
         X = np.stack(X_list, axis=0)   # (n_points, d)
         y = np.array(y_list)           # (n_points,)
@@ -176,7 +179,7 @@ class GraphLaplacianPretrain:
         X_feat = self._eigenvecs
         y = self._y_gl
 
-        clf = LogisticRegression(max_iter=1000, solver='lbfgs', multi_class='auto')
+        clf = LogisticRegression(max_iter=1000, solver='lbfgs')
         clf.fit(X_feat, y)
         probs = clf.predict_proba(X_feat)
         t_class = float(log_loss(y, probs))

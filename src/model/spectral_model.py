@@ -111,7 +111,23 @@ class SpectralModel(nn.Module):
         phi_full = phi_matrix.new_zeros(B, self.K)
         phi_full[:, :k] = phi_matrix
 
-        A = self.metric(x) if self.metric is not None else None
+        # Compute metric output. Three cases:
+        #   None          → identity metric ('off')
+        #   (B, d)        → diagonal metric (DiagMetric, fast element-wise)
+        #   (B, d, d)     → full matrix (LambdaUSparse)
+        #
+        # For LambdaUPinn: use apply_to(x, grad) directly — one PINN call
+        # instead of assembling the full U matrix (d calls). This gives O(d)
+        # speedup. We store the result as (B, d) pre-applied vector 'Ag'.
+        from src.model.metric.lambda_u_pinn import LambdaUPinn
+        if self.metric is None:
+            A = None
+        elif isinstance(self.metric, LambdaUPinn) and grad_phi_k is not None:
+            # Pre-apply: Ag = A(x)·∇φ_k  via single PINN call
+            A = self.metric.apply_to(x, grad_phi_k)  # (B, d), already applied
+        else:
+            A = self.metric(x)  # (B, d) for diag or (B, d, d) for sparse
+
         head_out = self.head(phi_full, y)
 
         return {
