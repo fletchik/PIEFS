@@ -56,6 +56,7 @@ class SpectralDirichletLoss(nn.Module):
         A: torch.Tensor | None,
         head_out: dict[str, torch.Tensor],
         k: int,
+        Ag_pinn: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         """Compute all loss components.
 
@@ -87,20 +88,21 @@ class SpectralDirichletLoss(nn.Module):
             off_diag_error_k = phi_matrix.new_zeros(())
 
         # Dirichlet energy: L_mde = mean ||A(x)∇φ||²  (paper eq. 5-6).
-        # A can be:
-        #   None       → identity metric: ||∇φ||²  (metric_type='off')
-        #   (B, d)     → diagonal metric: ||λ ⊙ ∇φ||²  (DiagMetric, fast)
-        #   (B, d, d)  → full matrix metric: ||A∇φ||²  (LambdaUSparse/Pinn)
-        if A is None:
+        # Ag_pinn: (B,d) pre-applied A(x)∇φ from PINN (already computed).
+        # A=None:   identity → ||∇φ||²
+        # A=(B,d):  diagonal → ||λ ⊙ ∇φ||²    (DiagMetric, element-wise)
+        # A=(B,d,d):full mat → ||A∇φ||²         (LambdaUSparse, bmm)
+        if Ag_pinn is not None:
+            # PINN pre-applied: A(x)∇φ already computed via apply_to()
+            loss_dirichlet = (Ag_pinn ** 2).sum(dim=1).mean()
+        elif A is None:
             loss_dirichlet = (grad_phi_k ** 2).mean()
         elif A.dim() == 2:
-            # Diagonal case: Ag = λ ⊙ ∇φ  (element-wise, no bmm needed)
-            Ag = A * grad_phi_k  # (B, d)
+            Ag = A * grad_phi_k  # λ ⊙ ∇φ, element-wise
             loss_dirichlet = (Ag ** 2).sum(dim=1).mean()
         else:
-            # Full matrix case: Ag = A ∇φ
-            Ag = torch.bmm(A, grad_phi_k.unsqueeze(-1)).squeeze(-1)  # (B, d)
-            loss_dirichlet = (Ag ** 2).sum(dim=1).mean()  # ||A∇φ||²
+            Ag = torch.bmm(A, grad_phi_k.unsqueeze(-1)).squeeze(-1)
+            loss_dirichlet = (Ag ** 2).sum(dim=1).mean()
 
         loss_task = head_out['loss']
 

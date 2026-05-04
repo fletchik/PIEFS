@@ -279,6 +279,7 @@ class SequentialTrainer:
             phi_matrix=out['phi_matrix'],
             grad_phi_k=out['grad_phi_k'],
             A=out['A'],
+            Ag_pinn=out.get('Ag_pinn'),
             head_out=out['head_out'],
             k=self.model._active_k,
         )
@@ -399,15 +400,18 @@ class SequentialTrainer:
             x = batch['x'].to(self.device)
             _, grad = fn(x, return_grad=True)
             if grad is not None:
-                A = self.model.metric(x) if self.model.metric is not None else None
-                if A is None:
+                if self.model.metric is None:
                     energy = (grad ** 2).mean().item()
-                elif A.dim() == 2:
-                    # Diagonal metric: element-wise multiply
-                    energy = ((A * grad) ** 2).sum(dim=1).mean().item()
+                elif isinstance(self.model.metric, LambdaUPinn):
+                    Ag = self.model.metric.apply_to(x, grad)  # one PINN call
+                    energy = (Ag ** 2).sum(dim=1).mean().item()
                 else:
-                    Ag = torch.bmm(A, grad.unsqueeze(-1)).squeeze(-1)
-                    energy = (Ag ** 2).sum(dim=1).mean().item()  # ||A grad||²
+                    A = self.model.metric(x)
+                    if A.dim() == 2:
+                        energy = ((A * grad) ** 2).sum(dim=1).mean().item()
+                    else:
+                        Ag = torch.bmm(A, grad.unsqueeze(-1)).squeeze(-1)
+                        energy = (Ag ** 2).sum(dim=1).mean().item()
                 energies.append(energy)
         self.model.train()
         for i, f in enumerate(self.model.basis_set.functions):

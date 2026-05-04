@@ -111,22 +111,21 @@ class SpectralModel(nn.Module):
         phi_full = phi_matrix.new_zeros(B, self.K)
         phi_full[:, :k] = phi_matrix
 
-        # Compute metric output. Three cases:
-        #   None          → identity metric ('off')
-        #   (B, d)        → diagonal metric (DiagMetric, fast element-wise)
-        #   (B, d, d)     → full matrix (LambdaUSparse)
-        #
-        # For LambdaUPinn: use apply_to(x, grad) directly — one PINN call
-        # instead of assembling the full U matrix (d calls). This gives O(d)
-        # speedup. We store the result as (B, d) pre-applied vector 'Ag'.
+        # Compute metric. Four cases passed to the loss:
+        #   A=None,  Ag=None  → identity ('off'):       loss = ||∇φ||²
+        #   A=(B,d), Ag=None  → diagonal (DiagMetric):  loss = ||λ⊙∇φ||²
+        #   A=(B,d,d),Ag=None → full matrix (Sparse):   loss = ||A∇φ||²
+        #   A=None,  Ag=(B,d) → PINN pre-applied:       loss = ||Ag||²
+        #                        Ag = U(x)·Λ(x)·∇φ already computed via one PINN call.
         from src.model.metric.lambda_u_pinn import LambdaUPinn
+        A, Ag_pinn = None, None
         if self.metric is None:
-            A = None
+            pass  # identity
         elif isinstance(self.metric, LambdaUPinn) and grad_phi_k is not None:
-            # Pre-apply: Ag = A(x)·∇φ_k  via single PINN call
-            A = self.metric.apply_to(x, grad_phi_k)  # (B, d), already applied
+            # One PINN call: Ag = A(x)·∇φ  (O(d) faster than assembling full U)
+            Ag_pinn = self.metric.apply_to(x, grad_phi_k)  # (B, d)
         else:
-            A = self.metric(x)  # (B, d) for diag or (B, d, d) for sparse
+            A = self.metric(x)  # (B, d) diag or (B, d, d) full
 
         head_out = self.head(phi_full, y)
 
@@ -134,5 +133,6 @@ class SpectralModel(nn.Module):
             'phi_matrix': phi_matrix,
             'grad_phi_k': grad_phi_k,
             'A': A,
+            'Ag_pinn': Ag_pinn,   # pre-applied result, use directly as ||Ag||²
             'head_out': head_out,
         }

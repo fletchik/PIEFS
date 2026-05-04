@@ -12,36 +12,43 @@ logger = logging.getLogger(__name__)
 
 
 class _RotationPINN(nn.Module):
-    """MLP approximating v(1) = U(x) · v_0.
+    """MLP approximating v(1) = expm(ω) · v_0.
 
-    Input: (x, v_0) concatenated → Output: v_hat ≈ expm(ω(x)) · v_0.
+    KEY DESIGN (paper Section 2.3): PINN takes (ω_vec, v_0) as input,
+    NOT (x, v_0). This means it learns to compute matrix exponential
+    for ARBITRARY skew-symmetric ω, so it stays valid even as _omega_mlp
+    continues to train during the main loop.
+
+    Input: (ω_vec, v_0) concatenated → Output: v_hat ≈ expm(ω) · v_0
+      ω_vec: (B, d-1) — sparse skew-sym parameterisation (first off-diagonal)
+      v_0:   (B, d)   — initial vector
 
     Args:
-        x_dim: Dimensionality of x.
-        v_dim: Dimensionality of v (same as x_dim = d).
+        omega_dim: d-1 (number of free parameters in sparse ω)
+        v_dim: d (vector dimension)
         hidden_dims: Hidden layer widths.
     """
 
     def __init__(
         self,
-        x_dim: int,
+        omega_dim: int,
         v_dim: int,
         hidden_dims: list[int] | None = None,
     ) -> None:
         super().__init__()
         if hidden_dims is None:
             hidden_dims = [128, 128, 128]
-        self.net = _make_mlp(x_dim + v_dim, hidden_dims, v_dim)
+        self.net = _make_mlp(omega_dim + v_dim, hidden_dims, v_dim)
 
-    def forward(self, x: torch.Tensor, v0: torch.Tensor) -> torch.Tensor:
+    def forward(self, omega_vec: torch.Tensor, v0: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            x: (B, x_dim)
-            v0: (B, v_dim) initial vector.
+            omega_vec: (B, d-1) sparse skew-symmetric parameterisation
+            v0: (B, d) initial vector
         Returns:
-            v_hat: (B, v_dim) approximation of U(x) · v_0.
+            v_hat: (B, d) approximation of expm(omega) · v_0
         """
-        return self.net(torch.cat([x, v0], dim=-1))
+        return self.net(torch.cat([omega_vec, v0], dim=-1))
 
 
 class LambdaUPinn(nn.Module):
@@ -73,7 +80,8 @@ class LambdaUPinn(nn.Module):
         self.d = input_dim
         self._lam_mlp = _make_mlp(input_dim, hidden_dims, input_dim)
         self._omega_mlp = _make_mlp(input_dim, hidden_dims, input_dim - 1)
-        self._pinn = _RotationPINN(input_dim, input_dim, pinn_hidden_dims)
+        # PINN takes (omega_vec, v0) — stays valid as _omega_mlp trains
+        self._pinn = _RotationPINN(input_dim - 1, input_dim, pinn_hidden_dims)
 
     def _build_omega(self, v: torch.Tensor) -> torch.Tensor:
         B, d = v.shape[0], self.d
@@ -119,23 +127,23 @@ class LambdaUPinn(nn.Module):
             v0 = torch.randn(batch_size, self.d, device=device, dtype=dtype)
             v0 = F.normalize(v0, dim=-1)
 
+            # Sample RANDOM omega_vec (not from _omega_mlp) — PINN learns universal solver
+            omega_v = torch.randn(batch_size, self.d - 1, device=device, dtype=dtype)
             with torch.no_grad():
-                omega_v = self._omega_mlp(x)
                 omega = self._build_omega(omega_v)
                 U_exact = torch.linalg.matrix_exp(omega)  # (B, d, d)
                 target = torch.bmm(U_exact, v0.unsqueeze(-1)).squeeze(-1)  # (B, d)
 
-            v_hat = self._pinn(x, v0)
+            v_hat = self._pinn(omega_v, v0)
             loss_mse = F.mse_loss(v_hat, target)
 
             # Orthogonality regularization: two orthogonal inputs → orthogonal outputs.
             v1 = F.normalize(torch.randn(batch_size, self.d, device=device, dtype=dtype), dim=-1)
-            # Gram-Schmidt: v2 ⊥ v1.
             v2 = torch.randn(batch_size, self.d, device=device, dtype=dtype)
             v2 = v2 - (v2 * v1).sum(dim=-1, keepdim=True) * v1
             v2 = F.normalize(v2, dim=-1)
-            u1 = self._pinn(x.detach(), v1)
-            u2 = self._pinn(x.detach(), v2)
+            u1 = self._pinn(omega_v, v1)
+            u2 = self._pinn(omega_v, v2)
             loss_ortho = ((u1 * u2).sum(dim=-1) ** 2).mean()
 
             loss = loss_mse + w_ortho * loss_ortho
@@ -159,52 +167,48 @@ class LambdaUPinn(nn.Module):
         logger.info('PINN pretraining complete.')
 
     def _get_U(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute U(x) by evaluating the PINN for each basis vector.
+        """Compute U(x) as full (B, d, d) matrix. Used for visualisation only.
 
-        Assembles U column-by-column: U[:, :, j] = PINN(x, e_j).
-
-        Args:
-            x: (B, d)
-        Returns:
-            U: (B, d, d)
+        Assembles U column-by-column via d PINN calls: U[:,:,j] = PINN(ω(x), e_j).
         """
         B, d = x.shape[0], self.d
+        omega_v = self._omega_mlp(x)   # (B, d-1)
         eye = torch.eye(d, device=x.device, dtype=x.dtype)
-        cols = [self._pinn(x, eye[j].unsqueeze(0).expand(B, d)) for j in range(d)]
+        cols = [self._pinn(omega_v, eye[j].unsqueeze(0).expand(B, d)) for j in range(d)]
         return torch.stack(cols, dim=2)  # (B, d, d)
 
     def apply_to(self, x: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
         """Efficiently compute A(x)·v = U(x)·(Λ(x)·v) with ONE PINN call.
 
-        Key insight: instead of assembling U as a full (B, d, d) matrix
-        via d separate PINN calls, we compute:
-            w = Λ(x) · v   — element-wise multiply (O(Bd), free)
-            Av = PINN(x, w) — single forward pass gives U(x)·w  (O(B·d·h))
+        Because PINN takes (ω(x), v), one forward pass gives U(x)·v directly:
+            w = Λ(x) · v              — element-wise O(Bd)
+            Av = PINN(ω(x), w)        — one call, O(B·(d-1+d)·h)
 
-        This is O(d) times faster than _get_U() + bmm.
-        Used by SpectralModel when metric_type='lambda_u_pinn'.
+        O(d) faster than assembling the full U matrix.
+        ω(x) is computed fresh from _omega_mlp, so PINN stays correct
+        even as _omega_mlp trains during the main loop.
 
         Args:
-            x: (B, d) input points
-            v: (B, d) vectors to apply A to (e.g. gradient ∇φ)
+            x: (B, d)
+            v: (B, d) gradient ∇φ
         Returns:
             Av: (B, d) = A(x)·v
         """
         raw = self._lam_mlp(x)
         raw = raw - raw.mean(dim=1, keepdim=True)
-        lam = torch.exp(raw)      # (B, d)
-        w = lam * v               # Λ·v, element-wise
-        return self._pinn(x, w)   # U·w, one PINN call
+        lam = torch.exp(raw)              # (B, d)
+        w = lam * v                       # Λ·v, element-wise
+        omega_v = self._omega_mlp(x)     # (B, d-1), fresh each call
+        return self._pinn(omega_v, w)    # U·w via one PINN call
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute A(x) = U_pinn(x) · Λ(x) as full (B, d, d) matrix.
+        """Compute A(x) = U(x) · Λ(x) as full (B, d, d) matrix.
 
-        Prefer apply_to() for efficiency in the loss computation.
-        This method is kept for compatibility (e.g. visualisation).
+        Prefer apply_to() for training. This is kept for visualisation.
         """
         raw = self._lam_mlp(x)
         raw = raw - raw.mean(dim=1, keepdim=True)
         lam = torch.exp(raw)
-        Lambda = torch.diag_embed(lam)  # (B, d, d)
-        U = self._get_U(x)             # (B, d, d), d PINN calls
+        Lambda = torch.diag_embed(lam)
+        U = self._get_U(x)              # d PINN calls
         return torch.bmm(U, Lambda)
