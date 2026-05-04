@@ -188,18 +188,28 @@ class LambdaUPinn(nn.Module):
         ω(x) is computed fresh from _omega_mlp, so PINN stays correct
         even as _omega_mlp trains during the main loop.
 
+        Normalization: PINN was pretrained on unit vectors, but w = Λ∇φ is
+        generally not unit-norm. We normalise w before the PINN call and
+        re-scale the output, exploiting U's isometry: U·(αv) = α·(U·v).
+        This prevents Tanh saturation at large ||w|| and keeps the PINN
+        in the distribution it was trained on.
+
         Args:
             x: (B, d)
             v: (B, d) gradient ∇φ
         Returns:
-            Av: (B, d) = A(x)·v
+            Av: (B, d) = A(x)·v = U(x)·(Λ(x)·v)
         """
         raw = self._lam_mlp(x)
         raw = raw - raw.mean(dim=1, keepdim=True)
-        lam = torch.exp(raw)              # (B, d)
-        w = lam * v                       # Λ·v, element-wise
-        omega_v = self._omega_mlp(x)     # (B, d-1), fresh each call
-        return self._pinn(omega_v, w)    # U·w via one PINN call
+        lam = torch.exp(raw)                          # (B, d)
+        w = lam * v                                   # Λ·v, element-wise
+        # Normalise for PINN (trained on unit vectors)
+        norms = w.norm(dim=-1, keepdim=True).clamp(min=1e-8)  # (B, 1)
+        w_unit = w / norms                            # (B, d) unit vector
+        omega_v = self._omega_mlp(x)                 # (B, d-1), fresh each call
+        u_w_unit = self._pinn(omega_v, w_unit)       # U·(w/||w||) via PINN
+        return u_w_unit * norms                       # rescale: U·w = ||w||·U·(w/||w||)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute A(x) = U(x) · Λ(x) as full (B, d, d) matrix.

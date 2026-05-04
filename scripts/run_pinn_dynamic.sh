@@ -150,59 +150,63 @@ run_train "pinn_mnist_mc_pinn_s42_gl" \
     trainer.seed=42 $GL_ARGS
 
 # =============================================================================
-# GROUP P2: Dynamic weighting ablation (paper eq. 9-10)
-#   dynamic_weighting=True: w_task *= exp(-gram/t_orth)
-#                            w_mde  *= exp(-max(gram/t_orth, task/t_class))
-#   Enforces the training hierarchy: L_orth first → L_class → L_mde (Dirichlet)
-#   NEVER tested before — this is the paper's main algorithmic contribution!
+# GROUP P2: Static weighting ABLATION (criterion.dynamic_weighting=false)
+#
+#   The default (spectral.yaml) is dynamic_weighting=true (paper's method).
+#   All 31 overnight experiments already used dynamic weighting correctly.
+#   This group explicitly disables it to measure the contribution of
+#   the adaptive hierarchy (paper eq. 9-10) via fair comparison.
+#
+#   Comparison: overnight night_htru2_*_s42  (dynamic=true, same seeds)
+#           vs: pinn_htru2_*_static_s42      (dynamic=false, same seeds)
 # =============================================================================
 log ""
-log "===== P2: Dynamic weighting — HTRU2 all metrics ====="
+log "===== P2: STATIC weighting ablation — HTRU2 all metrics ====="
 # ~8 min per run × 4 = 32 min
 
-run_train "pinn_htru2_off_dyn_s42" \
+run_train "pinn_htru2_off_static_s42" \
     dataset=htru2 model.K=6 model.metric_type='off' \
-    criterion.dynamic_weighting=true \
+    criterion.dynamic_weighting=false \
     trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
     trainer.seed=42
 
-run_train "pinn_htru2_diag_dyn_s42" \
+run_train "pinn_htru2_diag_static_s42" \
     dataset=htru2 model.K=6 model.metric_type=diag \
-    criterion.dynamic_weighting=true \
+    criterion.dynamic_weighting=false \
     trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
     trainer.seed=42
 
-run_train "pinn_htru2_sparse_dyn_s42" \
+run_train "pinn_htru2_sparse_static_s42" \
     dataset=htru2 model.K=6 model.metric_type=lambda_u_sparse \
-    criterion.dynamic_weighting=true \
+    criterion.dynamic_weighting=false \
     trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
     trainer.seed=42
 
-run_train "pinn_htru2_pinn_dyn_s42" \
+run_train "pinn_htru2_pinn_static_s42" \
     dataset=htru2 model.K=6 model.metric_type=lambda_u_pinn \
-    criterion.dynamic_weighting=true \
+    criterion.dynamic_weighting=false \
     trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
     trainer.seed=42
 
 log ""
-log "===== P2b: Dynamic weighting — MNIST mc all metrics ====="
-# ~22 min per run × 4 = 88 min
+log "===== P2b: STATIC weighting ablation — MNIST mc ====="
+# ~22 min per run × 3 = 66 min
 
-run_train "pinn_mnist_mc_off_dyn_s42" \
+run_train "pinn_mnist_mc_off_static_s42" \
     dataset=mnist_multiclass model.K=10 model.task=multiclass model.metric_type='off' \
-    criterion.dynamic_weighting=true \
+    criterion.dynamic_weighting=false \
     trainer.total_steps=240000 trainer.log_step=60000 trainer.save_period=120000 \
     trainer.seed=42
 
-run_train "pinn_mnist_mc_diag_dyn_s42" \
+run_train "pinn_mnist_mc_diag_static_s42" \
     dataset=mnist_multiclass model.K=10 model.task=multiclass model.metric_type=diag \
-    criterion.dynamic_weighting=true \
+    criterion.dynamic_weighting=false \
     trainer.total_steps=240000 trainer.log_step=60000 trainer.save_period=120000 \
     trainer.seed=42
 
-run_train "pinn_mnist_mc_pinn_dyn_s42" \
+run_train "pinn_mnist_mc_pinn_static_s42" \
     dataset=mnist_multiclass model.K=10 model.task=multiclass model.metric_type=lambda_u_pinn \
-    criterion.dynamic_weighting=true \
+    criterion.dynamic_weighting=false \
     trainer.total_steps=240000 trainer.log_step=60000 trainer.save_period=120000 \
     trainer.seed=42
 

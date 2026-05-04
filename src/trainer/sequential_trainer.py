@@ -243,8 +243,12 @@ class SequentialTrainer:
            Prevents overfitting where NN learns piecewise-constant functions
            with zero gradient at data points.
         2. Wide normal points: replace a fraction of the batch with samples
-           from N(0, 3*std(x)), with dummy labels.
-           Increases eigenfunction smoothness away from the data manifold.
+           from N(0, 3*std(x)), with RANDOM labels sampled from the batch.
+           These points push eigenfunctions to be smooth far from the data manifold
+           (Dirichlet term), while random labels avoid biasing the classification head.
+
+           NOTE: using label=0 for all wide points would bias multiclass heads;
+           random labels from the real batch distribution keep the head unbiased.
         """
         # 1. Noise perturbation
         if self.noise_std > 0:
@@ -254,13 +258,17 @@ class SequentialTrainer:
         if self.wide_normal_fraction > 0:
             B = x.shape[0]
             n_wide = max(1, int(B * self.wide_normal_fraction))
+            n_real = B - n_wide
             # Auto-compute sigma_wide as 3x data std
             data_std = x.std(dim=0, keepdim=True).clamp(min=1e-6)
             wide_points = torch.randn(n_wide, x.shape[1], device=x.device) * (3 * data_std)
-            wide_labels = torch.zeros(n_wide, dtype=y.dtype, device=y.device)
+            # BUG-FIX: was torch.zeros — labels=0 biases multiclass head.
+            # Use random labels sampled (with replacement) from the real batch.
+            rand_idx = torch.randint(0, n_real, (n_wide,), device=y.device)
+            wide_labels = y[:n_real][rand_idx]
             # Replace last n_wide entries (don't expand batch — keep memory stable)
-            x = torch.cat([x[:B - n_wide], wide_points], dim=0)
-            y = torch.cat([y[:B - n_wide], wide_labels], dim=0)
+            x = torch.cat([x[:n_real], wide_points], dim=0)
+            y = torch.cat([y[:n_real], wide_labels], dim=0)
 
         return x, y
 
@@ -284,6 +292,12 @@ class SequentialTrainer:
             k=self.model._active_k,
         )
         loss_dict['loss'].backward()
+        # Gradient clipping — prevents exploding gradients on high-d inputs
+        # (e.g. MNIST d=784 where early steps can produce large ∇φ).
+        torch.nn.utils.clip_grad_norm_(
+            [p for p in self.model.parameters() if p.requires_grad],
+            max_norm=1.0,
+        )
         optimizer.step()
 
         return {k: v.item() if isinstance(v, torch.Tensor) else v for k, v in loss_dict.items()}

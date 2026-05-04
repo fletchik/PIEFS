@@ -96,7 +96,10 @@ class SpectralDirichletLoss(nn.Module):
             # PINN pre-applied: A(x)∇φ already computed via apply_to()
             loss_dirichlet = (Ag_pinn ** 2).sum(dim=1).mean()
         elif A is None:
-            loss_dirichlet = (grad_phi_k ** 2).mean()
+            # ||∇φ||² per sample = sum over d, then mean over B.
+            # BUG-FIX: was .mean() which divides by B×d instead of B,
+            # making MDE d× weaker than diag/sparse cases.
+            loss_dirichlet = (grad_phi_k ** 2).sum(dim=1).mean()
         elif A.dim() == 2:
             Ag = A * grad_phi_k  # λ ⊙ ∇φ, element-wise
             loss_dirichlet = (Ag ** 2).sum(dim=1).mean()
