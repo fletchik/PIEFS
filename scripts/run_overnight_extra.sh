@@ -148,12 +148,9 @@ run_train "night_mnist_mc_off_s123" \
     trainer.total_steps=240000 trainer.log_step=60000 trainer.save_period=120000 \
     trainer.seed=123
 
-# sparse on MNIST — stress test for A(x) on 784D
-# NOTE: this will be slow (784x784 metric matrix); but important to test
-run_train "night_mnist_mc_sparse_s42" \
-    dataset=mnist_multiclass model.K=10 model.task=multiclass model.metric_type=lambda_u_sparse \
-    trainer.total_steps=240000 trainer.log_step=60000 trainer.save_period=120000 \
-    trainer.seed=42
+# sparse on MNIST SKIPPED: d=784 makes (B,784,784) matrices — impractical on CPU.
+# Use lambda_u_pinn instead once its apply_to() is wired into the training loop.
+# For now, test sparse only on low-d datasets (HTRU2 d=8 is fine).
 
 # =============================================================================
 log ""
