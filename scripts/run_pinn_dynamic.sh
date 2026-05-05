@@ -82,27 +82,14 @@ log "============================================================"
 # =============================================================================
 log ""
 log "===== P1: lambda_u_pinn — HTRU2 (d=8, K=6) ====="
-# ~8 min per run × 4 = 32 min
+log "  NOTE: all 4 HTRU2 PINN runs completed before crash (22:28-22:53)."
+log "  Skipping to avoid re-running. Results in logs/pinn_htru2_pinn_*"
 
-run_train "pinn_htru2_pinn_s42" \
-    dataset=htru2 model.K=6 model.metric_type=lambda_u_pinn \
-    trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
-    trainer.seed=42
-
-run_train "pinn_htru2_pinn_s123" \
-    dataset=htru2 model.K=6 model.metric_type=lambda_u_pinn \
-    trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
-    trainer.seed=123
-
-run_train "pinn_htru2_pinn_s42_gl" \
-    dataset=htru2 model.K=6 model.metric_type=lambda_u_pinn \
-    trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
-    trainer.seed=42 $GL_ARGS
-
-run_train "pinn_htru2_pinn_s123_gl" \
-    dataset=htru2 model.K=6 model.metric_type=lambda_u_pinn \
-    trainer.total_steps=120000 trainer.log_step=30000 trainer.save_period=60000 \
-    trainer.seed=123 $GL_ARGS
+# ALREADY DONE (run before caffeinate was killed):
+# pinn_htru2_pinn_s42    ✓ 483s
+# pinn_htru2_pinn_s123   ✓ 486s
+# pinn_htru2_pinn_s42_gl ✓ 502s
+# pinn_htru2_pinn_s123_gl ✓ 501s
 
 log ""
 log "===== P1b: lambda_u_pinn — MNIST binary (d=784, K=6) ====="
