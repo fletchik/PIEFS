@@ -168,10 +168,23 @@ class GraphLaplacianPretrain:
     # Step 5: compute T_class via logistic regression
     # ------------------------------------------------------------------
 
-    def compute_t_class(self) -> float:
-        """Train logistic regression on eigenvectors → return cross-entropy T_class."""
+    def compute_t_class(self, val_fraction: float = 0.2) -> float:
+        """Train LR on GL eigenvectors, evaluate on held-out slice → T_class.
+
+        FIX (P1, CODE_AUDIT_REPORT §2.9):
+          Previously fit and evaluated on the same data (training log-loss),
+          which is a lower bound and causes w_mde to activate earlier than
+          it should.  Now uses an 80/20 stratified split so T_class is an
+          honest out-of-sample estimate.
+
+        Args:
+            val_fraction: Fraction of GL subsample held out for evaluation.
+                          Default 0.2 (20 %).
+        """
+        import numpy as np
         from sklearn.linear_model import LogisticRegression
         from sklearn.metrics import log_loss
+        from sklearn.model_selection import train_test_split
 
         if self._eigenvecs is None:
             raise RuntimeError('Call compute_eigenfunctions() first.')
@@ -179,12 +192,34 @@ class GraphLaplacianPretrain:
         X_feat = self._eigenvecs
         y = self._y_gl
 
+        # Stratified split so T_class is an honest out-of-sample estimate.
+        try:
+            X_tr, X_val, y_tr, y_val = train_test_split(
+                X_feat, y,
+                test_size=val_fraction,
+                stratify=y,
+                random_state=0,
+            )
+        except ValueError:
+            # Fallback: if a class has too few samples for stratification,
+            # use random split without stratify.
+            log.warning(
+                'GL: stratified split failed (too few samples per class), '
+                'using random split for T_class.'
+            )
+            X_tr, X_val, y_tr, y_val = train_test_split(
+                X_feat, y, test_size=val_fraction, random_state=0,
+            )
+
         clf = LogisticRegression(max_iter=1000, solver='lbfgs')
-        clf.fit(X_feat, y)
-        probs = clf.predict_proba(X_feat)
-        t_class = float(log_loss(y, probs))
+        clf.fit(X_tr, y_tr)
+        probs = clf.predict_proba(X_val)
+        t_class = float(log_loss(y_val, probs))
         self.t_class = t_class
-        log.info('GL: T_class (LR cross-entropy on GL features) = %.4f', t_class)
+        log.info(
+            'GL: T_class = %.4f  (LR cross-entropy on %.0f%% held-out GL features)',
+            t_class, val_fraction * 100,
+        )
         return t_class
 
     # ------------------------------------------------------------------
@@ -204,13 +239,26 @@ class GraphLaplacianPretrain:
         X_torch = torch.tensor(self._X_gl, dtype=torch.float32, device=self.device)
         targets = torch.tensor(self._eigenvecs, dtype=torch.float32, device=self.device)
 
-        loss = torch.tensor(0.0)  # fallback if distill_steps == 0
+        # FIX (P2, CODE_AUDIT_REPORT §2.8): removed `loss = torch.tensor(0.0)`
+        # fallback.  If distill_steps == 0, the loop body never runs and
+        # `loss.item()` in the final log line would silently print 0.0,
+        # making it look like perfect distillation when none happened.
+        if self.distill_steps <= 0:
+            log.warning(
+                'GL: distill_steps=%d — skipping distillation, '
+                'basis functions remain at random init.',
+                self.distill_steps,
+            )
+            basis_set.freeze_all()
+            return
+
         for k_idx in range(self.K):
             # Unfreeze only function k_idx+1
             basis_set.set_active(k_idx + 1)
             basis_fn = basis_set.functions[k_idx]
             optimizer = torch.optim.Adam(basis_fn.parameters(), lr=self.distill_lr)
             target_k = targets[:, k_idx]   # (n_points,)
+            loss = None  # will be set in the loop below
 
             log.info('GL: distilling φ_%d for %d steps...', k_idx + 1, self.distill_steps)
             for step in range(self.distill_steps):
@@ -223,6 +271,7 @@ class GraphLaplacianPretrain:
                 if (step + 1) % 500 == 0:
                     log.info('  step %d/%d  mse=%.6f', step + 1, self.distill_steps, loss.item())
 
+            assert loss is not None, 'distill_steps > 0 but loss was never computed'
             log.info('GL: φ_%d distilled  mse=%.6f', k_idx + 1, loss.item())
 
         # Leave all functions frozen; sequential trainer's set_active() handles unfreezing

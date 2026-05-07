@@ -181,11 +181,11 @@ class SequentialTrainer:
         self._save_checkpoint(self.total_steps, is_final=True)
 
         # Full-dataset gram_error after training all K functions.
-        gram_final = self._compute_gram_error_final()
+        gram_final = self._compute_gram_error_on_loader(self.val_loader, loader_name='val')
         logger.info(
-            'gram_error_final (full val set) = %.5f  offdiag = %.5f',
-            gram_final['gram_error_final'],
-            gram_final['gram_error_offdiag'],
+            'gram_error_val (full val set) = %.5f  offdiag = %.5f',
+            gram_final['gram_error_val'],
+            gram_final['gram_error_offdiag_val'],
         )
         if self.writer is not None:
             self.writer.set_step(self.total_steps)
@@ -325,7 +325,13 @@ class SequentialTrainer:
     def _evaluate(self) -> dict[str, float]:
         self.model.eval()
         all_probs, all_labels = [], []
-        gram_errors = []
+        # FIX (P1, CODE_AUDIT_REPORT §2.6):
+        # Collect all φ_matrix rows across batches so the Gram matrix is
+        # computed on the FULL validation set in one shot.
+        # Old code averaged per-batch ‖C_batch − I‖_F, which is NOT the
+        # same as ‖C_full − I‖_F — with small batches it is inflated by
+        # high per-batch variance and can differ by 2–10× from the true value.
+        all_phi_cols: list[torch.Tensor] = []
 
         for batch in self.val_loader:
             x = batch['x'].to(self.device)
@@ -334,12 +340,8 @@ class SequentialTrainer:
             # grad must be enabled: BasisFunction.forward(return_grad=True) calls
             # torch.autograd.grad, which needs a live computation graph.
             out = self.model(x, y)
-            k = self.model._active_k
-            phi = out['phi_matrix']
-            B = phi.shape[0]
-            C = (phi.T @ phi) / B
-            eye_k = torch.eye(k, device=phi.device, dtype=phi.dtype)
-            gram_errors.append(torch.norm(C - eye_k, p='fro').item())
+            phi = out['phi_matrix']           # (B, k)
+            all_phi_cols.append(phi.detach().cpu())
 
             probs = out['head_out']['probs'].detach()
             if probs.dim() == 1:
@@ -354,7 +356,15 @@ class SequentialTrainer:
             if i != self.model._active_k - 1:
                 fn.eval()
 
-        metrics: dict[str, float] = {'val/gram_error': float(torch.tensor(gram_errors).mean())}
+        # Full-data Gram error — correct estimate of ‖E[φφᵀ] − I‖_F.
+        phi_full = torch.cat(all_phi_cols, dim=0)   # (N_val, k)
+        N_val = phi_full.shape[0]
+        k = self.model._active_k
+        C_full = (phi_full.T @ phi_full) / N_val
+        eye_k = torch.eye(k, dtype=phi_full.dtype)
+        gram_error_full = float(torch.norm(C_full - eye_k, p='fro').item())
+
+        metrics: dict[str, float] = {'val/gram_error': gram_error_full}
         try:
             from sklearn.metrics import accuracy_score, roc_auc_score
 
@@ -383,11 +393,24 @@ class SequentialTrainer:
         return metrics
 
     @torch.no_grad()
-    def _compute_gram_error_final(self) -> dict[str, float]:
-        """Compute full-dataset orthogonality error on the validation set."""
+    def _compute_gram_error_on_loader(
+        self,
+        loader,
+        loader_name: str = 'val',
+    ) -> dict[str, float]:
+        """Compute full-dataset orthogonality error on a given DataLoader.
+
+        FIX (P2, CODE_AUDIT_REPORT §2.4):
+          Renamed from _compute_gram_error_final (misleading — it ran on val,
+          not the full dataset).  Now accepts a loader so callers can pass
+          either self.val_loader or self.train_loader.
+
+        Returns keys: gram_error_{loader_name}, gram_error_offdiag_{loader_name},
+                       gram_error_diag_{loader_name}
+        """
         self.model.eval()
         phi_cols = []
-        for batch in self.val_loader:
+        for batch in loader:
             x = batch['x'].to(self.device)
             # Evaluate all K functions on this batch.
             fns = self.model.basis_set.functions
@@ -413,9 +436,9 @@ class SequentialTrainer:
                 fn.eval()
 
         return {
-            'gram_error_final': gram_final,
-            'gram_error_offdiag': gram_offdiag,
-            'gram_error_diag': gram_diag,
+            f'gram_error_{loader_name}':        gram_final,
+            f'gram_error_offdiag_{loader_name}': gram_offdiag,
+            f'gram_error_diag_{loader_name}':    gram_diag,
         }
 
     def _compute_dirichlet_energy(self, k: int) -> float:
