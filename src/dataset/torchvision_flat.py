@@ -56,18 +56,24 @@ class TorchvisionFlatDataset(Dataset):
             X_train, y_train = self._filter_binary(X_train, y_train, binary_classes)
             X_test, y_test = self._filter_binary(X_test, y_test, binary_classes)
 
+        # Carve val from train BEFORE computing standardisation statistics
+        # so that mean/std are computed on train-only indices.
+        # FIX (P2, CODE_AUDIT_REPORT §1.1):
+        #   Old order: standardise X_train (full) → carve val.
+        #   This leaked val-point statistics into the normaliser.
+        #   New order: carve first → standardise only on train_idx.
+        n_total = len(X_train)
+        n_val = int(n_total * val_fraction)
+        rng = torch.Generator().manual_seed(seed)
+        perm = torch.randperm(n_total, generator=rng)
+        val_idx, train_idx = perm[:n_val], perm[n_val:]
+
         if standardize:
-            mean = X_train.mean(dim=0)
-            std = X_train.std(dim=0, correction=0).clamp(min=1e-8)
+            # Fit mean/std on the training slice only — no val leakage.
+            mean = X_train[train_idx].mean(dim=0)
+            std = X_train[train_idx].std(dim=0, correction=0).clamp(min=1e-8)
             X_train = (X_train - mean) / std
             X_test = (X_test - mean) / std
-
-        # Carve val from train.
-        n_train = len(X_train)
-        n_val = int(n_train * val_fraction)
-        rng = torch.Generator().manual_seed(seed)
-        perm = torch.randperm(n_train, generator=rng)
-        val_idx, train_idx = perm[:n_val], perm[n_val:]
 
         if split == 'train':
             self.X, self.y = X_train[train_idx], y_train[train_idx]
