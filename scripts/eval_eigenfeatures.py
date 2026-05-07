@@ -255,16 +255,16 @@ def main():
     # Build datasets
     print('Loading datasets...')
     train_ds = _build_dataset(ds_cfg, 'train', args.seed)
-    val_ds = _build_dataset(ds_cfg, 'val', args.seed)
+    test_ds  = _build_dataset(ds_cfg, 'test',  args.seed)  # FIX: use held-out test split, not val
 
     # Extract eigenfeatures
     print('Extracting eigenfeatures (train)...')
     phi_train, y_train, raw_train = extract_eigenfeatures(model, train_ds, device, args.batch_size)
     print(f'  Train: {phi_train.shape[0]} samples, {phi_train.shape[1]} features')
 
-    print('Extracting eigenfeatures (val)...')
-    phi_val, y_val, raw_val = extract_eigenfeatures(model, val_ds, device, args.batch_size)
-    print(f'  Val: {phi_val.shape[0]} samples, {phi_val.shape[1]} features')
+    print('Extracting eigenfeatures (test)...')
+    phi_test, y_test, raw_test = extract_eigenfeatures(model, test_ds, device, args.batch_size)
+    print(f'  Test: {phi_test.shape[0]} samples, {phi_test.shape[1]} features')
 
     # Gram error on train set
     gram = compute_gram_error(phi_train)
@@ -286,7 +286,7 @@ def main():
         frac_key = f'{frac:.0%}' if frac < 1 else '100%'
 
         # Eigenfeatures
-        res_eigen = evaluate_sklearn(phi_train, y_train, phi_val, y_val,
+        res_eigen = evaluate_sklearn(phi_train, y_train, phi_test, y_test,
                                      label_fraction=frac, seed=args.seed)
         rf_a = res_eigen.get('rf_accuracy', float('nan'))
         lr_a = res_eigen.get('lr_accuracy', float('nan'))
@@ -296,7 +296,7 @@ def main():
         all_results[f'eigen_{frac_key}'] = res_eigen
 
         # Raw features (baseline)
-        res_raw = evaluate_sklearn(raw_train, y_train, raw_val, y_val,
+        res_raw = evaluate_sklearn(raw_train, y_train, raw_test, y_test,
                                    label_fraction=frac, seed=args.seed)
         rf_a = res_raw.get('rf_accuracy', float('nan'))
         lr_a = res_raw.get('lr_accuracy', float('nan'))
