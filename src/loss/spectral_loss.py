@@ -113,6 +113,8 @@ class SpectralDirichletLoss(nn.Module):
         if self.dynamic_weighting:
             with torch.no_grad():
                 # Ratios: how far each loss is from its target.
+                # ratio > 1 → loss still far from target → weight suppressed.
+                # ratio < 1 → loss near/below target → weight activates.
                 ratio_gram = gram_error / self.t_orth          # scalar
                 # When w_task=0 (unsupervised), ignore task ratio so MDE
                 # activates based on gram convergence only (ratio_class=0).
@@ -126,6 +128,8 @@ class SpectralDirichletLoss(nn.Module):
                     -torch.max(ratio_gram, ratio_class)
                 )
         else:
+            ratio_gram = gram_error.new_tensor(float('nan'))
+            ratio_class = gram_error.new_tensor(float('nan'))
             w_task_eff = phi_matrix.new_tensor(self.w_task)
             w_mde_eff = phi_matrix.new_tensor(self.w_dirichlet)
 
@@ -142,6 +146,11 @@ class SpectralDirichletLoss(nn.Module):
             'loss_task': loss_task,
             'gram_error': gram_error.detach(),
             'off_diag_error_k': off_diag_error_k.detach(),
+            # Effective weights (same as base weights when dynamic_weighting=False)
             'w_task_eff': w_task_eff.detach(),
             'w_mde_eff': w_mde_eff.detach(),
+            # Normalised ratios (NaN when static): gram_error/t_orth, task/t_class
+            # ratio > 1 → weight near 0;  ratio = 0 → weight = base value
+            'ratio_gram': ratio_gram.detach(),
+            'ratio_class': ratio_class.detach(),
         }

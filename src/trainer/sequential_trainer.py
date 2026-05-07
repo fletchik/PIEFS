@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
 from itertools import repeat
@@ -98,6 +99,10 @@ class SequentialTrainer:
 
         # Accumulated metrics for result logging (keyed by global step).
         self._metrics_history: dict[int, dict] = {}
+
+        # JSONL file for per-step metrics (written at every log_step).
+        # Captures weights, losses, gram_error, val_acc — readable without WandB.
+        self._metrics_jsonl: Path = self.checkpoint_dir / 'metrics.jsonl'
 
         # Timing.
         self._start_time: float = 0.0
@@ -445,15 +450,61 @@ class SequentialTrainer:
         val_metrics: dict[str, float],
     ) -> None:
         wall = loss_dict.get('wall_time_seconds', 0.0)
-        logger.info(
-            'step %6d  k=%d  loss=%.4f  gram_err=%.4f  val_acc=%.4f  wall=%.0fs',
-            global_step,
-            k,
-            loss_dict.get('loss', float('nan')),
-            loss_dict.get('gram_error', float('nan')),
-            val_metrics.get('val/accuracy', float('nan')),
-            wall,
-        )
+        w_task = loss_dict.get('w_task_eff', float('nan'))
+        w_mde  = loss_dict.get('w_mde_eff',  float('nan'))
+        r_gram = loss_dict.get('ratio_gram',  float('nan'))
+        # Show effective weights in console so dynamic schedule is visible
+        # without WandB.  For static mode w_task=w_mde=1.0 (nan ratios omitted).
+        import math
+        if not math.isnan(r_gram):
+            logger.info(
+                'step %6d  k=%d  loss=%.4f  gram_err=%.4f  '
+                'w_task=%.3f  w_mde=%.3f  (r_g=%.2f)  val_acc=%.4f  wall=%.0fs',
+                global_step, k,
+                loss_dict.get('loss', float('nan')),
+                loss_dict.get('gram_error', float('nan')),
+                w_task, w_mde, r_gram,
+                val_metrics.get('val/accuracy', float('nan')),
+                wall,
+            )
+        else:
+            logger.info(
+                'step %6d  k=%d  loss=%.4f  gram_err=%.4f  '
+                'w_task=%.3f(static)  w_mde=%.3f(static)  val_acc=%.4f  wall=%.0fs',
+                global_step, k,
+                loss_dict.get('loss', float('nan')),
+                loss_dict.get('gram_error', float('nan')),
+                w_task, w_mde,
+                val_metrics.get('val/accuracy', float('nan')),
+                wall,
+            )
+
+        # ── JSONL metrics file ──────────────────────────────────────────
+        # Write one JSON line per log_step to <checkpoint_dir>/metrics.jsonl.
+        # Readable offline without WandB:  pd.read_json('metrics.jsonl', lines=True)
+        row: dict = {
+            'step': global_step,
+            'k': k,
+            'wall': round(wall, 1),
+            # losses
+            'loss':           round(loss_dict.get('loss',           float('nan')), 6),
+            'loss_gram':      round(loss_dict.get('loss_gram',      float('nan')), 6),
+            'loss_task':      round(loss_dict.get('loss_task',      float('nan')), 6),
+            'loss_dirichlet': round(loss_dict.get('loss_dirichlet', float('nan')), 6),
+            # orthogonality
+            'gram_error':     round(loss_dict.get('gram_error',     float('nan')), 6),
+            'offdiag_k':      round(loss_dict.get('off_diag_error_k', float('nan')), 6),
+            # dynamic weighting schedule
+            'w_task_eff':     round(loss_dict.get('w_task_eff',    float('nan')), 6),
+            'w_mde_eff':      round(loss_dict.get('w_mde_eff',     float('nan')), 6),
+            'ratio_gram':     round(loss_dict.get('ratio_gram',    float('nan')), 6),
+            'ratio_class':    round(loss_dict.get('ratio_class',   float('nan')), 6),
+            # validation
+            'val_acc':        round(val_metrics.get('val/accuracy', float('nan')), 6),
+        }
+        with open(self._metrics_jsonl, 'a') as fh:
+            fh.write(json.dumps(row) + '\n')
+        # ───────────────────────────────────────────────────────────────
 
         if self.writer is None:
             return

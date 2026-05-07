@@ -183,7 +183,14 @@ class LambdaUPinn(nn.Module):
             v2 = F.normalize(v2, dim=-1)
             u1 = self._pinn(omega_v, v1)
             u2 = self._pinn(omega_v, v2)
-            loss_ortho = ((u1 * u2).sum(dim=-1) ** 2).mean()
+            # Normalise outputs before computing orthogonality loss so that
+            # the inner product is scale-invariant: cos²(angle) ∈ [0,1].
+            # Without normalisation the inner product has variance O(d),
+            # causing loss_ortho ≈ 39 at d=784 vs ~0.003 at d=8 — very
+            # different gradient scales that destabilise pretraining at high d.
+            u1_n = F.normalize(u1, dim=-1)
+            u2_n = F.normalize(u2, dim=-1)
+            loss_ortho = ((u1_n * u2_n).sum(dim=-1) ** 2).mean()
 
             loss = loss_mse + w_ortho * loss_ortho
 
