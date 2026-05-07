@@ -38,6 +38,7 @@ model:
   metric_type: 'off'         # quoted: bare 'off' is parsed as bool False in YAML
   metric_hidden_dims: [64, 64]
   task: binary               # "binary" or "multiclass"
+  output_bias: false         # False = new experiments; True = backward-compat with old checkpoints
 
 writer:
   project_name: efdo-ai4physics   # WandB project name

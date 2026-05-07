@@ -48,9 +48,10 @@ def _load_htru2(seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarr
     tr = HTRU2Dataset(split='train', **kw)
     te = HTRU2Dataset(split='test',  **kw)
     X_tr = np.array([s['x'].numpy() for s in tr])
-    y_tr = np.array([s['labels'].item() for s in tr])
+    lk = 'labels' if 'labels' in tr[0] else 'label'
+    y_tr = np.array([s[lk].item() for s in tr])
     X_te = np.array([s['x'].numpy() for s in te])
-    y_te = np.array([s['labels'].item() for s in te])
+    y_te = np.array([s[lk].item() for s in te])
     return X_tr, y_tr, X_te, y_te
 
 
@@ -66,9 +67,10 @@ def _load_sklearn_2d(
     tr = SklearnDataset(split='train', **kw)
     te = SklearnDataset(split='test',  **kw)
     X_tr = np.array([s['x'].numpy() for s in tr])
-    y_tr = np.array([s['labels'].item() for s in tr])
+    lk = 'labels' if 'labels' in tr[0] else 'label'
+    y_tr = np.array([s[lk].item() for s in tr])
     X_te = np.array([s['x'].numpy() for s in te])
-    y_te = np.array([s['labels'].item() for s in te])
+    y_te = np.array([s[lk].item() for s in te])
     return X_tr, y_tr, X_te, y_te
 
 
@@ -79,9 +81,10 @@ def _load_mnist(seed: int, task: str = 'multiclass') -> tuple[np.ndarray, np.nda
     tr = TorchvisionFlatDataset(split='train', **kw)
     te = TorchvisionFlatDataset(split='test',  **kw)
     X_tr = np.array([s['x'].numpy() for s in tr])
-    y_tr = np.array([s['labels'].item() for s in tr])
+    lk = 'labels' if 'labels' in tr[0] else 'label'
+    y_tr = np.array([s[lk].item() for s in tr])
     X_te = np.array([s['x'].numpy() for s in te])
-    y_te = np.array([s['labels'].item() for s in te])
+    y_te = np.array([s[lk].item() for s in te])
     return X_tr, y_tr, X_te, y_te
 
 
