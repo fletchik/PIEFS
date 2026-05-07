@@ -152,6 +152,11 @@ def main(cfg: DictConfig) -> None:
     noise_std = float(aug_cfg.get('noise_std', 0.0))
     wide_normal_fraction = float(aug_cfg.get('wide_normal_fraction', 0.0))
 
+    # Gradient clipping: None = disabled (default).
+    # Old hardcoded 1.0 destroyed dynamic weighting schedule (§1.7 audit).
+    max_grad_norm_raw = cfg.trainer.get('max_grad_norm', None)
+    max_grad_norm = float(max_grad_norm_raw) if max_grad_norm_raw is not None else None
+
     trainer = SequentialTrainer(
         model=model,
         criterion=criterion,
@@ -170,6 +175,7 @@ def main(cfg: DictConfig) -> None:
         config=project_config,
         noise_std=noise_std,
         wide_normal_fraction=wide_normal_fraction,
+        max_grad_norm=max_grad_norm,
     )
 
     # ------------------------------------------------------------------

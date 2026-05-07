@@ -74,6 +74,7 @@ class SequentialTrainer:
         config: dict | None = None,
         noise_std: float = 0.0,
         wide_normal_fraction: float = 0.0,
+        max_grad_norm: float | None = None,
     ) -> None:
         self.model = model
         self.criterion = criterion
@@ -96,6 +97,12 @@ class SequentialTrainer:
         self.skip_oom = skip_oom
         self.noise_std = noise_std
         self.wide_normal_fraction = wide_normal_fraction
+        # FIX (P0, §1.7): max_grad_norm=None disables clipping by default.
+        # The old hardcoded 1.0 was too aggressive — it collapses the gradient
+        # norm to 1.0 regardless of which loss term is dominant, thereby
+        # undoing the dynamic weighting schedule (w_task_eff, w_mde_eff).
+        # Set to a positive float (e.g. 10.0) only if raw gradients diverge.
+        self.max_grad_norm = max_grad_norm
 
         # Accumulated metrics for result logging (keyed by global step).
         self._metrics_history: dict[int, dict] = {}
@@ -297,12 +304,16 @@ class SequentialTrainer:
             k=self.model._active_k,
         )
         loss_dict['loss'].backward()
-        # Gradient clipping — prevents exploding gradients on high-d inputs
-        # (e.g. MNIST d=784 where early steps can produce large ∇φ).
-        torch.nn.utils.clip_grad_norm_(
-            [p for p in self.model.parameters() if p.requires_grad],
-            max_norm=1.0,
-        )
+        # Gradient clipping — disabled by default (max_grad_norm=None).
+        # Enable via train.py config only if gradients diverge on a specific
+        # dataset. A hardcoded 1.0 was previously used but it overrode the
+        # dynamic weighting schedule (see CODE_AUDIT_REPORT §1.7).
+        if self.max_grad_norm is not None:
+            grad_norm = torch.nn.utils.clip_grad_norm_(
+                [p for p in self.model.parameters() if p.requires_grad],
+                max_norm=self.max_grad_norm,
+            )
+            loss_dict['grad_norm'] = float(grad_norm)
         optimizer.step()
 
         return {k: v.item() if isinstance(v, torch.Tensor) else v for k, v in loss_dict.items()}
