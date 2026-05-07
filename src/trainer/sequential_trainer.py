@@ -561,6 +561,9 @@ class SequentialTrainer:
             name = f'checkpoint_{global_step // 1000}k.pt'
 
         path = self.checkpoint_dir / name
+        # FIX (P3, §3.3 + §2.14): save _best_val_acc and criterion.t_class
+        # so resume / analysis tools can read the model-selection threshold
+        # and the GL-derived T_class without re-running GL pretraining.
         state = {
             'global_step': global_step,
             'current_function_k': self.model._active_k,
@@ -573,6 +576,9 @@ class SequentialTrainer:
             'wall_time_seconds': time.time() - self._start_time,
             'wall_time_per_function': self._wall_time_per_function,
             'config': self.config,
+            # Trainer state for honest resume.
+            'best_val_acc': self._best_val_acc,
+            't_class': getattr(self.criterion, 't_class', None),
         }
         if self._optimizer is not None:
             state['optimizer_state_dict'] = self._optimizer.state_dict()

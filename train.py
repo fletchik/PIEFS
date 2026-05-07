@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import random
+import time
 from pathlib import Path
 
 import hydra
@@ -220,6 +221,14 @@ def main(cfg: DictConfig) -> None:
         trainer._metrics_history = ckpt.get('metrics_history', {})
         trainer._eigenvalue_history = ckpt.get('eigenvalue_history', [])
         trainer._wall_time_per_function = ckpt.get('wall_time_per_function', [])
+        # FIX (P3, §3.3 + §2.14): restore best_val_acc and t_class on resume
+        # so model-selection threshold is not reset to -1.0.
+        if 'best_val_acc' in ckpt:
+            trainer._best_val_acc = ckpt['best_val_acc']
+        if 'T_class' in ckpt and hasattr(trainer.criterion, 't_class'):
+            trainer.criterion.t_class = ckpt['t_class']
+        # Restore wall-clock start so resumed wall-time is cumulative.
+        trainer._start_time = time.time() - ckpt.get('wall_time_seconds', 0.0)
         log.info('Loaded checkpoint at step %d', ckpt.get('global_step', 0))
 
     trainer.train()
