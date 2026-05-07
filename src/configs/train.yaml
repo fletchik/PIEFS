@@ -40,8 +40,13 @@ model:
   task: binary               # "binary" or "multiclass"
 
 writer:
-  project_name: op-spectra-nn
-  mode: offline              # "online" | "offline" | "disabled"
+  project_name: efdo-ai4physics   # WandB project name
+  mode: online                    # "online" | "offline" | "disabled"
+  # Optional overrides (auto-derived from dataset+metric_type+seed if null):
+  entity: null          # WandB username or team (null = personal account)
+  run_name: null        # Human-readable name shown in WandB UI
+  tags: null            # List of tags; null → auto: [dataset, metric, K, seed]
+  notes: null           # Free-text notes attached to the run
 
 # Graph Laplacian pretraining (paper Section 2.4); false by default
 pretrain:

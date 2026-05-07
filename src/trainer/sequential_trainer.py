@@ -544,12 +544,16 @@ class SequentialTrainer:
             return
 
         self.writer.set_step(global_step)
+        # Build flat dict for batch upload — one wandb.log call per step.
+        wb: dict[str, float] = {'train/function_k': k}
         for name, value in {**loss_dict, **val_metrics}.items():
-            if isinstance(value, (int, float)):
-                prefix = 'train' if '/' not in name else ''
-                full_name = f'{prefix}/{name}' if prefix else name
-                self.writer.add_scalar(full_name, value)
-        self.writer.add_scalar('train/current_function_k', k)
+            if not isinstance(value, (int, float)):
+                continue
+            if '/' in name:
+                wb[name] = value        # already prefixed (e.g. val/accuracy)
+            else:
+                wb[f'train/{name}'] = value
+        self.writer.add_scalars(wb)
 
     def _save_checkpoint(
         self,

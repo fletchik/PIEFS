@@ -517,19 +517,23 @@ python train.py run_id=mnist_mc_off_gpu_s42 dataset=mnist_multiclass model.metri
 ### День 1 (8 мая) — Минимум для статьи
 
 #### Утро (4 часа)
-- [ ] Реализовать **Предложение A** (Trotter metric, замена PINN) — 1 час
-- [ ] Написать тесты `tests/test_metrics.py` — 1 час
-- [ ] Подключить **WandB** (init, log, sweep config) — 1 час
-- [ ] Написать **sklearn baseline скрипт** (PCA, kPCA, SpectralEmbedding) — 1 час
+- [x] ~~Реализовать **Предложение A** (Trotter metric, замена PINN)~~ — **СДЕЛАНО** (`src/model/metric/lambda_u_trotter.py`, 7 мая)
+- [x] ~~Написать тесты `tests/test_metrics.py`~~ — **СДЕЛАНО** (22 теста, все проходят)
+- [x] ~~Подключить **WandB** (tags, run_name, batch log, entity, notes)~~ — **СДЕЛАНО** (7 мая)
+- [x] ~~Написать **sklearn baseline скрипт**~~ — **СДЕЛАНО** (`scripts/run_sklearn_baselines.py`)
+- [x] ~~Написать **main grid runner**~~ — **СДЕЛАНО** (`scripts/run_main_grid.sh` + `collect_grid_results.py`)
 
 #### День (8 часов)
 - [ ] Запустить Tier 1 main grid на **HTRU2 + TwoMoon + Circles** (CPU, 5 сидов) — 6 часов
+  - Команда: `bash scripts/run_main_grid.sh DATASETS="two_moon circles htru2" METRICS="off diag lambda_u_trotter"`
 - [ ] Параллельно: sklearn baselines на всех 4 датасетах — 30 мин
-- [ ] Параллельно: Trotter metric на 4 датасетах × 5 сидов — 6 часов
+  - Команда: `.venv/bin/python3 scripts/run_sklearn_baselines.py --datasets two_moon circles htru2`
+- [ ] Параллельно: Trotter на 4 датасетах × 5 сидов — уже включён в main grid
 
 #### Вечер (4 часа)
 - [ ] Запустить **MNIST 10-class** main grid на GPU (Kaggle) — 1 час
-- [ ] Сборка таблиц: mean ± std из всех runs — 1 час
+  - На Kaggle: `DATASETS="mnist_mc" bash scripts/run_main_grid.sh`
+- [ ] Сборка таблиц: `python scripts/collect_grid_results.py` — 5 мин
 - [ ] Начать писать секции статьи (Method, Experiments) — 2 часа
 
 ### День 2 (9 мая, утро) — Финал
@@ -591,34 +595,32 @@ python train.py run_id=mnist_mc_off_gpu_s42 dataset=mnist_multiclass model.metri
 
 ## Приложение A — Команды для запуска
 
-### Sklearn baselines
+### Sklearn baselines ✅
 ```bash
-# scripts/run_sklearn_baselines.py — нужно написать
+# Quick run on 3 tabular datasets (2-3 min)
 .venv/bin/python3 scripts/run_sklearn_baselines.py \
-    --datasets htru2 two_moon circles mnist_multiclass \
-    --methods pca kpca_rbf kpca_poly spectral_embedding \
-    --seeds 42 123 456 789 1024 \
-    --output results/baselines_test.json
+    --datasets two_moon circles htru2 \
+    --seeds 0 1 2 3 4 --n_components 6
+
+# With MNIST (slow — SpectralEmbedding on 60k samples)
+.venv/bin/python3 scripts/run_sklearn_baselines.py \
+    --datasets two_moon circles htru2 mnist_mc \
+    --seeds 0 1 2 3 4 --n_components 6
 ```
 
-### Main grid (5 сидов)
+### Main grid ✅ (60 runs, 4 datasets × 3 metrics × 5 seeds)
 ```bash
-# scripts/run_main_grid.sh — нужно написать
-for seed in 42 123 456 789 1024; do
-    for ds in htru2 two_moon circles mnist_multiclass; do
-        for metric in off diag trotter; do  # trotter = новый PINN-replacement
-            for weighting in static dynamic; do
-                .venv/bin/python3 train.py \
-                    run_id="grid_${ds}_${metric}_${weighting}_s${seed}" \
-                    dataset=$ds \
-                    model.metric_type=$metric \
-                    loss.dynamic_weighting=$([ "$weighting" = "dynamic" ] && echo true || echo false) \
-                    seed=$seed \
-                    logging.wandb=true
-            done
-        done
-    done
-done
+# Default: sequential, all 60 runs
+bash scripts/run_main_grid.sh
+
+# Parallel (background jobs, one per run):
+PARALLEL=1 bash scripts/run_main_grid.sh
+
+# GPU (Kaggle): skip mnist_mc from CPU run, do it on GPU
+DATASETS="two_moon circles htru2" bash scripts/run_main_grid.sh
+
+# Collect results after grid completes
+.venv/bin/python3 scripts/collect_grid_results.py
 ```
 
 ### Тесты
@@ -646,12 +648,89 @@ done
 
 ---
 
-**Финальный итог:** для дедлайна 9 мая критичны:
-1. ✅ Все P0 фиксы (сделано)
-2. ⏳ Trotter metric (Предложение A) — 1 час
-3. ⏳ Sklearn baselines (PCA, kPCA, SpectralEmbedding) — 1 час
-4. ⏳ WandB интеграция — 1 час
-5. ⏳ 5-seed runs main grid (CPU + Kaggle GPU) — 8 часов параллельно
-6. ⏳ Написать статью — 8 часов
+**Финальный итог (обновлено 7 мая):**
+1. ✅ Все P0-P3 фиксы (7 коммитов после аудита)
+2. ✅ LambdaUTrotter — точная ортогональная метрика, замена PINN
+3. ✅ 22 теста (`tests/test_metrics.py`), все проходят
+4. ✅ WandB интеграция (tags, run_name, batch logging, entity, notes)
+5. ✅ sklearn baseline скрипт (`scripts/run_sklearn_baselines.py`)
+6. ✅ Main grid runner (`scripts/run_main_grid.sh` + `collect_grid_results.py`)
+7. ✅ AI4Physics workshop article draft (`docs/ai4physics_draft.md`)
+8. ⏳ Запустить 60-run main grid (CPU/Kaggle) — **следующий шаг**
+9. ⏳ Запустить sklearn baselines — 5 мин
 
-**Реально успеть:** да, если фокусироваться только на critical path.
+**Реально успеть к 9 мая:** да — grid запускается одной командой,
+результаты агрегируются автоматически в LaTeX-таблицу.
+
+### Полный пронумерованный список Tier 1 runs (60 штук)
+
+Каждая строка: `run_id | dataset | metric | seed`
+
+```
+ 1  grid_two_moon_off_s0               two_moon   off                  0
+ 2  grid_two_moon_off_s1               two_moon   off                  1
+ 3  grid_two_moon_off_s2               two_moon   off                  2
+ 4  grid_two_moon_off_s3               two_moon   off                  3
+ 5  grid_two_moon_off_s4               two_moon   off                  4
+ 6  grid_two_moon_diag_s0              two_moon   diag                 0
+ 7  grid_two_moon_diag_s1              two_moon   diag                 1
+ 8  grid_two_moon_diag_s2              two_moon   diag                 2
+ 9  grid_two_moon_diag_s3              two_moon   diag                 3
+10  grid_two_moon_diag_s4              two_moon   diag                 4
+11  grid_two_moon_lambda_u_trotter_s0  two_moon   lambda_u_trotter     0
+12  grid_two_moon_lambda_u_trotter_s1  two_moon   lambda_u_trotter     1
+13  grid_two_moon_lambda_u_trotter_s2  two_moon   lambda_u_trotter     2
+14  grid_two_moon_lambda_u_trotter_s3  two_moon   lambda_u_trotter     3
+15  grid_two_moon_lambda_u_trotter_s4  two_moon   lambda_u_trotter     4
+16  grid_circles_off_s0                circles    off                  0
+17  grid_circles_off_s1                circles    off                  1
+18  grid_circles_off_s2                circles    off                  2
+19  grid_circles_off_s3                circles    off                  3
+20  grid_circles_off_s4                circles    off                  4
+21  grid_circles_diag_s0               circles    diag                 0
+22  grid_circles_diag_s1               circles    diag                 1
+23  grid_circles_diag_s2               circles    diag                 2
+24  grid_circles_diag_s3               circles    diag                 3
+25  grid_circles_diag_s4               circles    diag                 4
+26  grid_circles_lambda_u_trotter_s0   circles    lambda_u_trotter     0
+27  grid_circles_lambda_u_trotter_s1   circles    lambda_u_trotter     1
+28  grid_circles_lambda_u_trotter_s2   circles    lambda_u_trotter     2
+29  grid_circles_lambda_u_trotter_s3   circles    lambda_u_trotter     3
+30  grid_circles_lambda_u_trotter_s4   circles    lambda_u_trotter     4
+31  grid_htru2_off_s0                  htru2      off                  0
+32  grid_htru2_off_s1                  htru2      off                  1
+33  grid_htru2_off_s2                  htru2      off                  2
+34  grid_htru2_off_s3                  htru2      off                  3
+35  grid_htru2_off_s4                  htru2      off                  4
+36  grid_htru2_diag_s0                 htru2      diag                 0
+37  grid_htru2_diag_s1                 htru2      diag                 1
+38  grid_htru2_diag_s2                 htru2      diag                 2
+39  grid_htru2_diag_s3                 htru2      diag                 3
+40  grid_htru2_diag_s4                 htru2      diag                 4
+41  grid_htru2_lambda_u_trotter_s0     htru2      lambda_u_trotter     0
+42  grid_htru2_lambda_u_trotter_s1     htru2      lambda_u_trotter     1
+43  grid_htru2_lambda_u_trotter_s2     htru2      lambda_u_trotter     2
+44  grid_htru2_lambda_u_trotter_s3     htru2      lambda_u_trotter     3
+45  grid_htru2_lambda_u_trotter_s4     htru2      lambda_u_trotter     4
+46  grid_mnist_mc_off_s0               mnist_mc   off                  0
+47  grid_mnist_mc_off_s1               mnist_mc   off                  1
+48  grid_mnist_mc_off_s2               mnist_mc   off                  2
+49  grid_mnist_mc_off_s3               mnist_mc   off                  3
+50  grid_mnist_mc_off_s4               mnist_mc   off                  4
+51  grid_mnist_mc_diag_s0              mnist_mc   diag                 0
+52  grid_mnist_mc_diag_s1              mnist_mc   diag                 1
+53  grid_mnist_mc_diag_s2              mnist_mc   diag                 2
+54  grid_mnist_mc_diag_s3              mnist_mc   diag                 3
+55  grid_mnist_mc_diag_s4              mnist_mc   diag                 4
+56  grid_mnist_mc_lambda_u_trotter_s0  mnist_mc   lambda_u_trotter     0
+57  grid_mnist_mc_lambda_u_trotter_s1  mnist_mc   lambda_u_trotter     1
+58  grid_mnist_mc_lambda_u_trotter_s2  mnist_mc   lambda_u_trotter     2
+59  grid_mnist_mc_lambda_u_trotter_s3  mnist_mc   lambda_u_trotter     3
+60  grid_mnist_mc_lambda_u_trotter_s4  mnist_mc   lambda_u_trotter     4
+```
+
+**Launch command:**
+```bash
+bash scripts/run_main_grid.sh           # all 60, sequential
+PARALLEL=1 bash scripts/run_main_grid.sh   # all 60, background jobs
+```

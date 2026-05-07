@@ -75,6 +75,13 @@ class SpectralDirichletLoss(nn.Module):
         B = phi_matrix.shape[0]
 
         # Gram matrix and orthogonality loss.
+        # NOTE (audit §1.3, intentionally deferred):
+        #   Code computes:  loss_gram = ‖Ê[φφᵀ] − I‖²_F  (bias of MC estimator, squared)
+        #   Paper Eq. 7:    L_gram = Σ_{αβ} E[(φ_α φ_β − δ_αβ)²]  (variance-aware)
+        # These differ when φ_α φ_β has non-zero variance across samples.
+        # The code version is a valid loss (squared MC gram error) and has been empirically
+        # stable. The paper formula should be updated to: L_gram = ‖(1/N)ΦᵀΦ − I‖²_F
+        # to match this implementation. No code change needed here; paper text needs fix.
         C_k = (phi_matrix.T @ phi_matrix) / B  # (k, k)
         I_k = torch.eye(k, device=phi_matrix.device, dtype=phi_matrix.dtype)
         diff = C_k - I_k

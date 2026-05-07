@@ -35,6 +35,8 @@ class WandBWriter:
         entity: str | None = None,
         mode: Literal['online', 'offline', 'disabled'] = 'offline',
         save_code: bool = False,
+        tags: list[str] | None = None,
+        notes: str | None = None,
     ) -> None:
         import wandb
 
@@ -42,16 +44,17 @@ class WandBWriter:
         self._mode = mode
         self._timer = datetime.now()
 
-        wandb.login()
         wandb.init(
             project=project_name,
             entity=entity,
             config=project_config,
-            name=run_name,
+            name=run_name or run_id,
             id=run_id,
             resume='allow',
             mode=mode,
             save_code=save_code,
+            tags=tags or [],
+            notes=notes,
         )
         self._wandb = wandb
 

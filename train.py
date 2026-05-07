@@ -139,12 +139,29 @@ def main(cfg: DictConfig) -> None:
     try:
         from src.logger.wandb_writer import WandBWriter
 
+        # Auto-generate a human-readable run name and tags from config.
+        # Override via cfg.writer.run_name / cfg.writer.tags if needed.
+        auto_run_name = cfg.writer.get('run_name') or (
+            f"{ds_cfg.name}_{cfg.model.metric_type}_K{K}_{run_id}"
+        )
+        auto_tags = list(cfg.writer.get('tags') or [
+            ds_cfg.name,
+            cfg.model.metric_type,
+            f"K{K}",
+            f"seed{cfg.trainer.seed}",
+        ])
+
         writer = WandBWriter(
             project_config=project_config,
             project_name=cfg.writer.project_name,
             run_id=run_id,
+            run_name=auto_run_name,
+            entity=cfg.writer.get('entity') or None,
             mode=cfg.writer.mode,
+            tags=auto_tags,
+            notes=cfg.writer.get('notes') or None,
         )
+        log.info('WandB run: %s  (mode=%s)', auto_run_name, cfg.writer.mode)
     except Exception as exc:
         log.warning('WandB init failed (%s); continuing without logging.', exc)
 
