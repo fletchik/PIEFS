@@ -70,7 +70,13 @@ def main(cfg: DictConfig) -> None:
 
     K = cfg.model.K
     input_dim = ds_cfg.input_dim
-    basis_set = BasisSet(K=K, input_dim=input_dim, hidden_dims=list(cfg.model.hidden_dims))
+    # output_bias=False: recommended for new experiments (see §1.4 audit).
+    # Default True keeps backward-compat with all checkpoints trained before
+    # this commit.  Set model.output_bias: false in YAML for new runs.
+    output_bias = bool(cfg.model.get('output_bias', True))
+    basis_set = BasisSet(K=K, input_dim=input_dim,
+                         hidden_dims=list(cfg.model.hidden_dims),
+                         output_bias=output_bias)
 
     metric = build_metric(
         metric_type=cfg.model.metric_type,

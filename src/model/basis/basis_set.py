@@ -23,12 +23,14 @@ class BasisSet(nn.Module):
         K: int,
         input_dim: int,
         hidden_dims: list[int] | None = None,
+        output_bias: bool = True,
     ) -> None:
         super().__init__()
         self.K = K
         self.input_dim = input_dim
         self.functions: nn.ModuleList = nn.ModuleList(
-            [BasisFunction(input_dim, hidden_dims) for _ in range(K)]
+            [BasisFunction(input_dim, hidden_dims, output_bias=output_bias)
+             for _ in range(K)]
         )
         self.freeze_all()
 

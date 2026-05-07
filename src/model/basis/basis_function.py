@@ -21,9 +21,10 @@ class BasisFunction(nn.Module):
         self,
         input_dim: int,
         hidden_dims: list[int] | None = None,
+        output_bias: bool = True,
     ) -> None:
         super().__init__()
-        self.net = BasisNet(input_dim, hidden_dims)
+        self.net = BasisNet(input_dim, hidden_dims, output_bias=output_bias)
 
     @torch.no_grad()
     def predict(self, x: torch.Tensor) -> torch.Tensor:
