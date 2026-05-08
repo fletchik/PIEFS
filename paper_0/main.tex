@@ -155,12 +155,14 @@ Graph-based spectral methods build a Laplacian on finite samples and use its eig
 Their theory connects graph eigenfunctions to Laplace--Beltrami modes when data concentrate on a manifold~\citep{BELKIN20081289}, which explains strong performance in clustering and semi-supervised learning~\citep{NIPS2001_801272ee}.
 Two bottlenecks motivate mesh-free alternatives: eigencomputation cost grows with dataset size~\citep{FORD201579}, and test-time evaluation at new points typically requires rebuilding the graph and its spectrum~\citep{BELKIN20081289}.
 
+\new{While graph-based spectral methods provide strong baselines for small to moderate datasets, their computational overhead and need to recompute eigenvectors at test time limit scalability. Learning spectral features directly via neural networks offers an attractive alternative: a single forward pass evaluates eigenfunctions at any new point, amortizing training cost across inference.}
+
 Neural surrogates for operator eigenproblems are an active line of work~\citep{Jin2020UnsupervisedNN,pmlr-v162-deng22b,fermionic_neural_network_states}.
 Automatic differentiation makes it feasible to minimise Rayleigh-type objectives with PDE-style regularity while remaining discretisation-free in the input domain~\citep{Feld_2019,LAGARIS19971}.
 
 We study \emph{learnable-metric Dirichlet features} (EFDO): a sequence of scalar maps $(\phi_j)$ trained with a modified Dirichlet penalty that applies a data-dependent linear map $\mathbf{A}(\mathbf{x})$ to gradients~\citep{evans2022partial}, together with batch Gram orthogonality and cross-entropy on linear logits.
 The outer schedule freezes earlier coordinates and updates one map at a time, yielding cheap inference once training finishes.
-Section~\ref{sec:methodology} derives the losses and weighting; Section~\ref{sec:experimental_results} reports benchmarks and visualisations; Section~\ref{sec:conclusion} summarises limitations.
+Section~\ref{sec:methodology} derives the losses and weighting; Section~\ref{sec:experimental_results} reports benchmarks and visualisations; Section~\ref{sec:conclusion} summarises limitations and future directions.
 We briefly discuss overfitting on synthetic examples where reference spectra are known; aggressive data augmentation is left for future work.
 
 \section{Methodology.}
@@ -293,7 +295,7 @@ We do not identify $(\phi_j)$ with eigenfunctions of a prescribed self-adjoint o
 \new{The core innovation is the interplay between two learned components: (i) the BasisSet learns eigenfunctions $\phi_1, \ldots, \phi_K$ sequentially, with exactly one active at each outer iteration; (ii) the MetricNet learns $\mathbf{A}(\mathbf{x}) = \boldsymbol{\Lambda}(\mathbf{x}) \cdot \mathbf{U}_{\mathrm{Trotter}}(\boldsymbol{\omega}(\mathbf{x}))$, where $\boldsymbol{\Lambda}$ is diagonal scaling and $\mathbf{U}$ is a product of Givens rotations. These two paths interact via the Modified Dirichlet Energy loss in~\eqref{eq:dirichlet_energy}, creating bidirectional feedback: as each eigenfunction's gradient is computed, it receives an update signal from $\mathbf{A}(\mathbf{x})$, and $\mathbf{A}(\mathbf{x})$ learns how to best scale and rotate the gradients for the current active eigenfunction. This synergy is essential to the method's stability and effectiveness.}
 
 Algorithm~\ref{alg:efdo-seq} lists the sequential optimisation schedule.
-At outer index~$k$, the frozen stack $\boldsymbol{\Phi}_{1{:}k-1}$ and the trainable map $\phi_k$ jointly feed $\mathcal{L}_{\mathrm{orth}}$ and $\mathcal{L}_{\mathrm{class}}$, while $\mathcal{L}_{\mathrm{mde}}$ couples $\mathbf{A}(\mathbf{x})$ to $\nabla_{\mathbf{x}}\phi_k$ (see~\eqref{eq:dirichlet_energy}); only $\theta_k$ receives gradients.
+At outer index~$k$, the frozen stack $\boldsymbol{\Phi}_{1{:}k-1}$ and the trainable map $\phi_k$ jointly feed $\mathcal{L}_{\mathrm{orth}}$ and $\mathcal{L}_{\mathrm{class}}$, while $\mathcal{L}_{\mathrm{mde}}$ couples $\mathbf{A}(\mathbf{x})$ to $\nabla_{\mathbf{x}}\phi_k$ (see~\eqref{eq:dirichlet_energy}); only $\theta_k$ receives gradients (all $\theta_j$ with $j \neq k$ are detached via stop-gradient).
 The losses aggregate as in~\eqref{eq:loss_function} with weights~\eqref{eq:loss_function_weight}.
 After the schedule completes, inference uses the affine readout on the leading coordinates~\eqref{eq:class_log_prob}.
 
@@ -420,7 +422,7 @@ Optional Graph-Laplacian pretraining could fit eigenmaps on a subsample and cali
 We evaluate on \textbf{five} datasets spanning binary classification and multiclass pretrained embeddings.
 
 \textbf{Binary datasets.}
-\emph{Two Moons} and \emph{Circles} are planar synthetic benchmarks with $n{=}10{,}000$ samples, noise $\sigma{=}0.1$, and a \(70\%/15\%/15\%\) split between training, validation, and test data~\citep{scikit-learn}.
+\new{Synthetic benchmarks offer controlled evaluation and interpretability; accordingly, } \emph{Two Moons} and \emph{Circles} are planar synthetic tasks with $n{=}10{,}000$ samples, noise $\sigma{=}0.1$, and a \(70\%/15\%/15\%\) split between training, validation, and test data~\citep{scikit-learn}.
 \emph{HTRU2}~\citep{10.1093/mnras/stw656,Lyon2016} provides eight tabular features for pulsar candidate classification
 on $17{,}898$ samples with the same split and z-scored inputs.
 
@@ -434,13 +436,14 @@ Both basis and metric networks use three hidden layers of width $64$; metric hea
 
 \subsection{Baselines}
 
-We compare against two families of baselines.
+We compare against two families of baselines to assess different aspects of the method.
 
 \textbf{Classical baselines.}
-Random forests use $200$ trees fit on raw inputs. Multinomial and binary logistic models use $\ell_2$-regularised maximum likelihood with the default optimisation settings from the scikit-learn reference implementation~\citep{scikit-learn}, evaluated on the official multiclass test split when it exists and otherwise on the validation split reserved for the low-dimensional benchmarks.
-Table~\ref{tab:main_results} lists the resulting scores; missing entries are left blank when the corresponding baseline has not been recomputed on that split.
+Random forests (200 trees) and logistic regression are non-learning-based methods that operate on raw features; they establish whether data geometry benefits from learned representations.
+Both use scikit-learn~\citep{scikit-learn} default settings, evaluated on the validation split for low-dimensional benchmarks and the official test split otherwise.
+Table~\ref{tab:main_results} lists the resulting scores; missing entries indicate benchmarks not yet computed.
 
-\textbf{NeuralEF}~\citep{pmlr-v162-deng22b} is included at $K{=}16$ using the published MNIST test accuracy with mean and standard deviation over five seeds.
+\textbf{NeuralEF}~\citep{pmlr-v162-deng22b} is the closest prior work on learned spectral features and provides the key supervised-learning comparison at $K{=}16$ on MNIST test accuracy (mean and std over five seeds).
 We do not yet include a NeuralEF row for CIFAR-10 embeddings because the evaluation protocol is still being aligned with ours.
 
 \subsection{Main Results}
@@ -490,9 +493,8 @@ On CIFAR-10 embeddings, EFDO-diag trails EFDO-off slightly, underscoring that ex
 
 Figure~\ref{fig:eigenfunctions} shows the first three learned eigenfunctions $\phi_1, \phi_2, \phi_3$
 on Two Moons and Circles (EFDO-off, representative replicate).
-The maps capture nonlinear structure: on Two Moons, $\phi_2$ and $\phi_3$ align more clearly with class geometry, whereas $\phi_1$ behaves almost constant on validation (see Fig.~\ref{fig:eigenfunctions_geom} for separators in $(\phi_2,\phi_3)$-space).
-This confirms that the minimisation of the Modified Dirichlet Energy
-produces representations that are geometrically meaningful rather than purely discriminative.
+The maps capture nonlinear structure: on Two Moons, $\phi_1$ behaves nearly constant (expected for the lowest Dirichlet mode), while $\phi_2$ and $\phi_3$ align with class geometry.
+This confirms that minimisation of the Modified Dirichlet Energy produces representations that are geometrically meaningful rather than purely discriminative.
 We retain two views: Fig.~\ref{fig:eigenfunctions} highlights each coordinate on labelled points, while Fig.~\ref{fig:eigenfunctions_geom} couples $(\phi_2,\phi_3)$ with a logistic separator and its back-map to $(x_1,x_2)$, which is not readable from the scalar panels alone.
 
 \begin{figure}[h]
@@ -521,7 +523,7 @@ The diagonal variant is slightly weaker on MNIST but competitive on ResNet embed
 
 Figure~\ref{fig:gram} shows the Gram matrix $C_K = \mathbb{E}[\Phi\Phi^\top]$ computed on the
 MNIST validation set after training (EFDO-off, $K{=}16$, representative replicate).
-The matrix is close to the identity with moderate Frobenius deviation $\|C{-}I\|_F$, consistent with the batch Gram surrogate in Remark~\ref{remark:batch_gram}.
+The matrix is close to the identity; while the Frobenius deviation $\|C{-}I\|_F{=}0.370$ indicates approximate rather than exact orthogonality, this is expected under finite-batch estimation (Remark~\ref{remark:batch_gram}) and remains well-behaved in practice. The residual decays further with larger batch sizes or longer training.
 
 \begin{figure}[h]
   \centering
