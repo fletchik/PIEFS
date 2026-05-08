@@ -532,12 +532,32 @@ The matrix is close to the identity; while the Frobenius deviation $\|C{-}I\|_F{
   \label{fig:gram}
 \end{figure}
 
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig_gram_convergence}
+  \caption{\new{Gram matrix constraint satisfaction during training. Left: Frobenius norm $\|C_k - I_k\|_F$ over training steps on MNIST. Right: Same metric on CIFAR-10 ResNet-18 embeddings. Both panels show mean $\pm$ standard deviation over five random seeds for EFDO-off variant at $K{=}16$. The exponential decay demonstrates that the orthogonality penalty effectively drives eigenfunctions towards orthonormality despite finite-batch estimation.}}
+  \label{fig:gram_convergence}
+\end{figure}
+
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\linewidth]{fig_eigenfunctions_geom}
   \caption{Maps $\phi_2$ and $\phi_3$ on dense $(x_1,x_2)$ grids for Two Moons (top) and Circles (bottom) under EFDO-off on a representative replicate. The first two columns show each map; validation points are overlaid with the zero contour of a logistic decision function in $(\phi_2,\phi_3)$. The third column colours the signed margin lifted to input space.}
   \label{fig:eigenfunctions_geom}
 \end{figure*}
+
+\subsection{Spectral Expressivity}
+
+Figure~\ref{fig:k_ablation} shows validation accuracy on MNIST as a function of $K$ (the number of learned eigenfunctions from 1 to 16) under EFDO-off training for $60{,}000$ steps per seed (mean $\pm$ std over five independent runs).
+Each additional eigenfunction provides a marginal but consistent improvement, reflecting the spectral nature of the method: early eigenfunctions (especially $\phi_2$ and $\phi_3$) capture gross class geometry, while higher-order modes refine class boundaries.
+The diminishing returns beyond $K{=}12$ suggest that the MNIST classification task does not require the full 16-dimensional eigenfunction basis; similar saturation is expected on CIFAR-10 embeddings but is left for future expanded evaluation.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig_k_ablation}
+  \caption{\new{Validation accuracy on MNIST (EFDO-off) versus the number of learned eigenfunctions $K \in [1,16]$. Bars show mean $\pm$ standard deviation over five random seeds at $K{=}16$-fixed training steps ($60{,}000$). The curve demonstrates that additional eigenfunctions consistently improve accuracy, with diminishing returns beyond $K{=}12$, consistent with spectral approximation theory.}}
+  \label{fig:k_ablation}
+\end{figure}
 
 Figure~\ref{fig:eigenfunctions_geom} shows how nonlinear coordinates reshape class boundaries in input space.
 
