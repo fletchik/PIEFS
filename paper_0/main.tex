@@ -105,8 +105,8 @@ We introduce a Trotter-product parametrisation of $\mathbf{A}$ that yields
 an exact orthogonal transformation without any orthogonalisation overhead.
 Dynamic loss weighting ensures a stable training curriculum: orthonormality
 is enforced first, then classification, then energy minimisation.
-On standard benchmarks, EFDO matches or exceeds tree-based and kernel-PCA
-baselines and substantially outperforms NeuralEF across all tested datasets:
+On standard benchmarks, EFDO substantially outperforms NeuralEF
+(fully unsupervised) across all tested datasets:
 on MNIST ($94.63\pm0.50\%$ vs.\ $84.98\%$ published, a $+9.6$ pp gain),
 on Fashion-MNIST ($87.11\pm0.55\%$ vs.\ $77.12\pm0.36\%$, a $+10.0$ pp gain),
 and on 512-dim CIFAR-10 features ($85.50\pm0.26\%$ vs.\ $76.05\pm0.55\%$,
@@ -260,21 +260,24 @@ only through the loss values, not through the adaptive weights.
 
 We enforce the training hierarchy
 \emph{orthonormality $\to$ classification $\to$ energy minimisation}
-via adaptive weights that depend on the current loss magnitudes:
+via adaptive weights that depend on the current loss magnitudes.
+Let $\varepsilon_{\text{gram}} = \|C_k - I_k\|_F$ (the Frobenius norm of the
+gram error, not squared):
 \begin{equation}
     \label{eq:loss_function_weight}
     \begin{cases}
         w_{\text{gram}}  &= w_{\text{gram}}^0, \\[2pt]
         w_{\text{class}} &= w_{\text{class}}^0
-                           \exp\!\bigl(-\mathcal{L}_{\text{gram}} / T_{\text{orth}}\bigr), \\[2pt]
+                           \exp\!\bigl(-\varepsilon_{\text{gram}} / T_{\text{orth}}\bigr), \\[2pt]
         w_{\text{mde}}   &= w_{\text{mde}}^0
-                           \exp\!\bigl(-\max(\mathcal{L}_{\text{gram}}/T_{\text{orth}},\,
+                           \exp\!\bigl(-\max(\varepsilon_{\text{gram}}/T_{\text{orth}},\,
                            \mathcal{L}_{\text{class}}/T_{\text{class}})\bigr).
     \end{cases}
 \end{equation}
-Here $T_{\text{orth}}$ and $T_{\text{class}}$ are target values at which
-the corresponding weight reaches $e^{-1}$ of its base value.
-When a loss exceeds its target, the weight is suppressed toward zero,
+Here $T_{\text{orth}}$ is the target for $\varepsilon_{\text{gram}}$ and
+$T_{\text{class}}$ is the target task loss; both weights reach $e^{-1}$ of
+their base value when the corresponding quantity equals its target.
+When a quantity exceeds its target, the weight is suppressed toward zero,
 preventing the less-prioritised objectives from interfering with the
 higher-priority one.
 The exponential form was found empirically to be more robust than
@@ -297,11 +300,12 @@ with $\sum_i \log\lambda_i = 0$ enforced to prevent volume collapse.
 The scale vector $\bm{\lambda}(\mathbf{x})$ is the output of a small
 feed-forward network.
 
-\textbf{Trotter-product rotation (lambda\_u\_trotter).}
+\textbf{Rotation extension (lambda\_u\_trotter).}
 $\mathbf{A}(\mathbf{x}) = \bm{\Lambda}(\mathbf{x})\,\mathbf{U}(\mathbf{x})$,
 where $\bm{\Lambda}$ is the diagonal scaling above and
-$\mathbf{U}(\mathbf{x}) \in SO(d)$ is an exact orthogonal matrix.
-Following the \emph{Trotter product} construction, we express
+$\mathbf{U}(\mathbf{x}) \in SO(d)$ is an exactly orthogonal matrix.
+We parametrise $\mathbf{U}$ as a product of sparse Givens rotations,
+inspired by Trotter-style factorisations:
 \begin{equation}
     \label{eq:trotter}
     \mathbf{U}(\mathbf{x}) = \prod_{(i,j)\in\mathcal{P}} G_{ij}(\theta_{ij}(\mathbf{x})),
@@ -312,9 +316,9 @@ Each angle $\theta_{ij}(\mathbf{x})$ is the output of a small network.
 Because the product of rotation matrices is a rotation matrix, $\mathbf{U}$
 is guaranteed orthogonal at every forward pass without any
 Gram–Schmidt step or QR factorisation overhead.
-This is the key advantage over approaches that parametrise $\mathbf{U}$ via
-the matrix exponential of a skew-symmetric network output: the Trotter
-form is numerically exact, not a first-order approximation.
+This is a key advantage over the matrix-exponential parametrisation
+of $\mathbf{U}$: the Givens product is numerically exact, not a first-order
+approximation.
 
 \subsection{Data Augmentation}
 \label{subsec:augmentation}
@@ -346,8 +350,6 @@ isotropic Gaussian
 where $\sigma_{\text{wide}} \approx 3\,\hat{\sigma}_{\text{data}}$ is set
 automatically.  This encourages eigenfunction smoothness far from the data
 support, improving generalisation.
-Figure~\ref{fig:unitc_regularization} illustrates the effect on the unit-circle
-benchmark.
 
 \subsection{Graph Laplacian Pretraining}
 \label{subsec:pretraining}
@@ -402,8 +404,14 @@ convolutional backbone, providing a higher-dimensional real-world test for
 the learnable metric variants.
 
 \paragraph{Evaluation protocol.}
-All datasets are split 70\% train / 10\% val / 20\% test with stratification
-preserved, standardised using training-set statistics only.
+For Two Moons, Circles, and HTRU2, data are split 70\% train / 15\% val / 15\%
+test with stratification.
+For MNIST, Fashion-MNIST, and CIFAR-10 features, we use the official
+torchvision train/test partition and hold out 10\% of training as a validation
+set (e.g.\ 54k/6k/10k for MNIST).
+All reported numbers are \emph{validation-set} accuracy; the official test
+sets are reserved for final evaluation.
+Standardisation uses training-set statistics only.
 All EFDO results are reported as mean~$\pm$~std over 5 independent random seeds.
 $K = 6$ for binary tasks; $K = 16$ for 10-class tasks.
 Training runs for 60{,}000 gradient steps for binary datasets and MNIST
@@ -430,8 +438,6 @@ All embedding methods use $n_{\text{components}} = K$ for a fair comparison.
 \label{subsec:synthetic}
 
 \textbf{Two Moons.}
-Figure~\ref{fig:unitc_regularization} illustrates the computed eigenfunctions
-on a related unit-circle benchmark, demonstrating smooth, Fourier-like features.
 On Two Moons (noise $= 0.1$), EFDO with identity metric achieves perfect
 classification (100.0\%) across all 5 seeds, slightly outperforming Random Forest
 (99.77\%~$\pm$~0.03\%) and dramatically exceeding linear baselines
@@ -476,19 +482,21 @@ training—while EFDO is supervised via $\mathcal{L}_{\text{class}}$.
 
 Full 5-seed results for all three metric variants show:
 EFDO off: $\mathbf{94.63\pm0.50\%}$,
-EFDO diag: $93.83\pm0.18\%$,
+EFDO diag: $93.73\pm0.26\%$ (10 seeds: 5 local + 5 Colab),
 EFDO Trotter: $94.06\pm0.39\%$ (3 of 5 seeds).
 All variants substantially exceed the $84.98\%$ reported by NeuralEF
 (a gap of $\mathbf{+9.6}$~pp for off).
 Our own reproduction of NeuralEF under identical splits yields
 $82.52\pm0.29\%$, giving a $+12.1$~pp gap.
 Notably, the Trotter variant ($94.06\%$, 3 seeds) is already comparable
-to the identity baseline, and the diagonal variant provides a tighter
-variance ($\pm0.18$\%) than either other variant.
+to the identity baseline, while the diagonal variant ($93.73\%$)
+is slightly below — suggesting that on pixel-space MNIST the learnable
+metric does not add over a simple identity.
 
-PCA + LR and TruncatedSVD + LR on the same split achieve
-approximately 93\% (16 components), confirming that EFDO features
-encode non-linear structure beyond linear projections.
+Sklearn baselines on the same split: Random Forest $97.12\pm0.03\%$,
+Logistic Regression $92.20\%$, PCA + LR $85.94\%$ (16 components).
+EFDO off exceeds PCA + LR by $\mathbf{+8.7}$~pp, confirming that
+EFDO features capture substantially more non-linear structure.
 
 \subsection{Fashion-MNIST}
 \label{subsec:fashion_mnist}
@@ -532,7 +540,7 @@ MNIST, Fashion-MNIST Trotter, and CIFAR-10 features entries marked $*$ or $\dagg
 are preliminary; full 5-seed grids are running.
 
 \begin{table*}[t]
-  \caption{Test accuracy (\%, mean~$\pm$~std over 5 seeds unless noted).
+  \caption{Validation accuracy (\%, mean~$\pm$~std over 5 seeds unless noted).
            Best EFDO variant per dataset in \textbf{bold}.
            $*$~partial (3 of 5 seeds; full results pending).}
   \label{tab:main_results}
@@ -550,20 +558,20 @@ are preliminary; full 5-seed grids are running.
       & $97.52\pm0.07$ & $94.63\pm0.50$ & $86.73\pm0.32$ & $85.50\pm0.26^*$ \\
     EFDO (diag, diagonal)
       & $99.97\pm0.03$           & $79.2\pm4.3$
-      & $97.48\pm0.04$ & $93.83\pm0.18$ & $\mathbf{87.11\pm0.55}$ & --- \\
+      & $97.48\pm0.04$ & $93.73\pm0.26^\dagger$ & $\mathbf{87.11\pm0.55}$ & --- \\
     EFDO (Trotter)
       & $99.91\pm0.07$           & $73.6\pm6.7$
       & $\mathbf{97.56\pm0.08}$ & $94.06\pm0.39^*$ & --- & --- \\
     \midrule
     % ── Baselines ────────────────────────────────────────────────────────
     Random Forest
-      & $99.77\pm0.03$ & $98.53\pm0.09$ & $98.07\pm0.06$ & $97.1$ & --- & --- \\
+      & $99.77\pm0.03$ & $98.53\pm0.09$ & $98.07\pm0.06$ & $97.12\pm0.03$ & --- & --- \\
     Logistic Regression (raw)
-      & $87.80\pm0.00$ & $50.40\pm0.00$ & $98.14\pm0.00$ & $92.7$ & --- & --- \\
+      & $87.80\pm0.00$ & $50.40\pm0.00$ & $98.14\pm0.00$ & $92.20$ & --- & --- \\
     PCA + LR
-      & $87.80\pm0.00$ & $50.40\pm0.00$ & $97.77\pm0.00$ & $93.0$ & --- & --- \\
+      & $87.80\pm0.00$ & $50.40\pm0.00$ & $97.77\pm0.00$ & $85.94$ & --- & --- \\
     KPCA (RBF) + LR
-      & $88.07\pm0.00$ & $49.40\pm0.00$ & $97.17\pm0.00$ & $97.2$ & --- & --- \\
+      & $88.07\pm0.00$ & $49.40\pm0.00$ & $97.17\pm0.00$ & $97.17$ & --- & --- \\
     SpectralEmbedding + LR
       & $49.98\pm0.92$ & $49.98\pm0.92$ & $91.50\pm0.72$ & ---    & --- & --- \\
     NeuralEF \citep{pmlr-v162-deng22b}$^\S$
@@ -576,6 +584,8 @@ are preliminary; full 5-seed grids are running.
     $\ddagger$ Circles without augmentation; high variance is expected
     (see Section~\ref{subsec:synthetic}).
     With Gaussian noise ($\sigma{=}0.1$) a single run achieves 97.9\%.\\
+    $\dagger$ MNIST diag: 10 seeds (5 local + 5 Colab); individual 5-seed
+    results are $93.83\pm0.18\%$ and $93.63\pm0.34\%$ respectively.\\
     $^\S$ NeuralEF is fully unsupervised; EFDO uses labels via $\mathcal{L}_{\text{class}}$.\\
     $^\P$ MNIST: from Deng et al.\ (2022) Table~2.
     Our reproduction under identical splits: $82.52\pm0.29\%$.
@@ -587,21 +597,18 @@ are preliminary; full 5-seed grids are running.
 \subsection{Ablation: Effect of Augmentation}
 \label{subsec:ablation}
 
-Figure~\ref{fig:unitc_overfit} shows the overfitting pathology on the
-unit-circle dataset: without input noise, the network learns a
-piecewise-constant function whose empirical Dirichlet loss is near zero
-but whose generalisation is poor.
+Without input noise, the network learns a piecewise-constant function whose
+empirical Dirichlet loss is near zero but whose generalisation is poor.
 Adding $\sigma = 0.02$ Gaussian noise (Eq.~\eqref{eq:sigma_noise}) recovers
 smooth, Fourier-like eigenfunctions.
-Figure~\ref{fig:unitc_regularization} shows the effect of wide-normal
-injection: the eigenfunction becomes smooth even far from the data manifold.
+Wide-normal injection further enforces smoothness far from the data manifold,
+improving generalisation on out-of-distribution points.
 
 \subsection{Training Dynamics}
 \label{subsec:dynamics}
 
-Figure~\ref{fig:htru2_loss_function} illustrates the warm-up effect on
-HTRU2: the classification loss drops rapidly once the Gram orthonormality
-loss (Eq.~\eqref{eq:loss_gram}) converges to its target $T_{\text{orth}}$.
+On HTRU2, the classification loss drops rapidly once the Gram orthonormality
+loss (Eq.~\eqref{eq:loss_gram}) converges near its target $T_{\text{orth}}$.
 Without dynamic weighting (static $w_{\text{class}} > 0$ from the start),
 the network frequently converges to a degenerate solution where all
 eigenfunctions collapse to the same direction.
@@ -633,25 +640,21 @@ $\sim$30{,}000–120{,}000 gradient steps, taking $\sim$2–10 minutes on a CPU
 for small datasets.
 
 \paragraph{Future work.}
-Completing the full 5-seed grids for MNIST (Trotter variant) and
-Fashion-MNIST (Trotter variant) will enable a complete comparison between
-the three metric choices on high-dimensional data.
+Completing the full 5-seed grids for MNIST Trotter, Fashion-MNIST Trotter,
+and CIFAR-10 (all variants) will allow final conclusions about the benefit
+of the learnable metric on high-dimensional data.
 Regression tasks (predicting continuous labels from eigenfunction values)
-and physical PDE settings (where $\mathbf{A}$ encodes a diffusion tensor)
-are further directions.
-Completing the full 5-seed grids for MNIST (diag and Trotter variants),
-Fashion-MNIST (Trotter), and CIFAR-10 (all variants) will allow final
-conclusions about the benefit of the learnable metric.
+and physical PDE benchmarks are further directions.
 
-\paragraph{Connection to AI4Physics.}
+\paragraph{Connection to physics-inspired learning.}
 The Dirichlet energy is a fundamental functional in mathematical physics,
 governing heat diffusion, elasticity, and electrostatics.
-The learnable metric $\mathbf{A}(\mathbf{x})$ can encode a spatially varying
-diffusion coefficient—a natural parametrisation for physical systems where
-transport is anisotropic or inhomogeneous.
-EFDO can therefore be interpreted as learning the dominant modes of a
-data-driven diffusion operator, bridging physics-inspired functional analysis
-and modern deep learning.
+The learnable metric $\mathbf{A}(\mathbf{x})$ can in principle encode a
+spatially varying diffusion coefficient—a natural parametrisation for
+physical systems where transport is anisotropic or inhomogeneous.
+The current experiments are on standard ML benchmarks; applying EFDO to
+physical PDE settings (e.g.\ learning eigenmodes of a measured diffusion
+operator) is an open direction for future work.
 
 \bibliography{bibliobase}
 \bibliographystyle{icml2026}
@@ -701,27 +704,28 @@ all experiments.
 \label{appendix:mnist_baselines}
 
 \begin{table}[H]
-  \caption{Baselines on MNIST (16 components, single seed for sklearn;
-           5 seeds for EFDO and NeuralEF).}
+  \caption{Validation accuracy on MNIST (16 components; sklearn single seed,
+           EFDO and NeuralEF 5 seeds unless noted; all measured on the same
+           10\% validation split).}
   \label{tab:mnist_baselines}
   \centering
   \small
   \begin{tabular}{lc}
     \toprule
-    Method & Test Accuracy (\%) \\
+    Method & Val Accuracy (\%) \\
     \midrule
-    Random Forest (raw)   & 97.1 \\
-    Logistic Regression   & 92.7 \\
-    PCA + LR              & 93.0 \\
-    KPCA (RBF) + LR       & 97.2 \\
-    TruncatedSVD + LR     & 93.0 \\
-    SpectralEmbedding + LR & 91.5 \\
+    Random Forest (raw)   & $97.12\pm0.03$ \\
+    Logistic Regression   & $92.20$ \\
+    PCA + LR              & $85.94$ \\
+    KPCA (RBF) + LR       & $97.17$ \\
+    TruncatedSVD + LR     & --- \\
+    SpectralEmbedding + LR & $91.50$ \\
     NeuralEF (Deng et al., published) & 84.98 \\
     NeuralEF (our reproduction, 5 seeds) & $82.52\pm0.29$ \\
     \midrule
-    \textbf{EFDO off (5 seeds)}     & $\mathbf{94.63\pm0.50}$ \\
-    EFDO diag (5 seeds)             & $93.83\pm0.18$ \\
-    EFDO Trotter (3 of 5 seeds)     & $94.06\pm0.39^*$ \\
+    \textbf{EFDO off (5 seeds)}         & $\mathbf{94.63\pm0.50}$ \\
+    EFDO diag (10 seeds, local+Colab)   & $93.73\pm0.26$ \\
+    EFDO Trotter (3 of 5 seeds)         & $94.06\pm0.39^*$ \\
     \bottomrule
   \end{tabular}
 \end{table}
