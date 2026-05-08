@@ -56,25 +56,36 @@ drive.mount('/content/drive')
 """))
 
 # ── 2. Setup DRIVE_ROOT ────────────────────────────────────────────────────
-cells.append(md("## 2. Configure paths"))
+cells.append(md("## 2. Configure paths\n\n"
+"**Isolation note:** Each Colab runtime has its own VM so `/content/` never conflicts "
+"with other notebooks. Drive writes go to `trotter_fixed_A/logs/` — a dedicated "
+"subdirectory that no other EFDO notebook touches."))
 cells.append(code("""
 from pathlib import Path
 
 DRIVE_ROOT = Path("/content/drive/MyDrive/EFDO_colab")
 
-# All logs/checkpoints for these runs go here
-DRIVE_LOG  = DRIVE_ROOT / "trotter_fixed" / "logs"
+# ── Dedicated output dir for this notebook ONLY ──────────────────────────
+# Other notebooks write to:
+#   EFDO_colab/logs/          (EFDO_GPU_Experiments)
+#   EFDO_colab/EFDO_NeuralEF/ (NeuralEF_Colab_Benchmark)
+#   EFDO_colab/baselines/     (EFDO_Baselines_Colab)
+# This notebook writes ONLY to:
+#   EFDO_colab/trotter_fixed_A/logs/   <-- isolated, safe to run in parallel
+DRIVE_LOG = DRIVE_ROOT / "trotter_fixed_A" / "logs"
 DRIVE_LOG.mkdir(parents=True, exist_ok=True)
 
-# Data dir (CIFAR-10 features must already be here from previous runs)
+# Data dir (shared read-only; CIFAR-10 features must already be here)
 DATA_DIR = DRIVE_ROOT / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-print("DRIVE_LOG:", DRIVE_LOG)
+print("DRIVE_LOG :", DRIVE_LOG)
+print("DATA_DIR  :", DATA_DIR)
+
 assert (DRIVE_ROOT / "efdo_source.zip").exists(), (
     f"efdo_source.zip not found at {DRIVE_ROOT}/efdo_source.zip\\n"
-    "Upload it from your Mac: bash scripts/package_for_colab.sh, "
-    "then upload efdo_source.zip to MyDrive/EFDO_colab/"
+    "On your Mac: bash scripts/package_for_colab.sh\\n"
+    "Then upload efdo_source.zip to MyDrive/EFDO_colab/"
 )
 print("efdo_source.zip found ✓")
 """))
@@ -336,7 +347,7 @@ print("Copy-paste into Table 2:\n")
 print(row)
 
 # Save to Drive
-out = DRIVE_ROOT / "trotter_fixed" / "results_trotter_fixed.txt"
+out = DRIVE_ROOT / "trotter_fixed_A" / "results_trotter_fixed_A.txt"
 out.parent.mkdir(parents=True, exist_ok=True)
 with open(out, "w") as f:
     f.write("=== lambda_u_trotter FIXED (A=ΛU) ===\n\n")
@@ -355,7 +366,7 @@ print(f"\nSaved to {out}")
 cells.append(md("## 11. Download results summary"))
 cells.append(code(r"""
 from google.colab import files
-results_file = DRIVE_ROOT / "trotter_fixed" / "results_trotter_fixed.txt"
+results_file = DRIVE_ROOT / "trotter_fixed_A" / "results_trotter_fixed_A.txt"
 if results_file.exists():
     files.download(str(results_file))
     print("Downloaded ✓")
