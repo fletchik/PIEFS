@@ -1,9 +1,15 @@
-\begin{thebibliography}{18}
+\begin{thebibliography}{33}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi: #1}\else
   \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Ahmadi \& Patras(2016)Ahmadi and Patras]{ahmadi2016unsupervised}
+Ahmadi, A. and Patras, I.
+\newblock Unsupervised convolutional neural networks for motion estimation.
+\newblock In \emph{2016 IEEE international conference on image processing
+  (ICIP)}, pp.\  1629--1633. IEEE, 2016.
 
 \bibitem[Ajmal et~al.(2018)Ajmal, Rehman, Farooq, Ain, Riaz, and
   Hassan]{ajmal2018convolutional}
@@ -30,10 +36,16 @@ Belkin, M. and Niyogi, P.
   \url{https://www.sciencedirect.com/science/article/pii/S0022000007001274}.
 \newblock Learning Theory 2005.
 
-\bibitem[Breiman(2001)]{breiman2001random}
-Breiman, L.
-\newblock Random forests.
-\newblock \emph{Machine Learning}, 45\penalty0 (1):\penalty0 5--32, 2001.
+\bibitem[Ben-Shaul et~al.(2023)Ben-Shaul, Bar, Fishelov, and
+  Sochen]{10.1162/neco_a_01583}
+Ben-Shaul, I., Bar, L., Fishelov, D., and Sochen, N.
+\newblock {Deep Learning Solution of the Eigenvalue Problem for Differential
+  Operators}.
+\newblock \emph{Neural Computation}, 35\penalty0 (6):\penalty0 1100--1134, 05
+  2023.
+\newblock ISSN 0899-7667.
+\newblock \doi{10.1162/neco_a_01583}.
+\newblock URL \url{https://doi.org/10.1162/neco\_a\_01583}.
 
 \bibitem[Calder et~al.(2020)Calder, Cook, Thorpe, and
   Slepcev]{646eb8ee0f50464f8db1e953d2df93c3}
@@ -50,6 +62,13 @@ Chang, Y., Wang, X., Wang, J., Wu, Y., Yang, L., Zhu, K., Chen, H., Yi, X.,
 \newblock A survey on evaluation of large language models.
 \newblock \emph{ACM Transactions on Intelligent Systems and Technology}, 2023.
 
+\bibitem[Choo et~al.(2020)Choo, Mezzacapo, and
+  Carleo]{fermionic_neural_network_states}
+Choo, K., Mezzacapo, A., and Carleo, G.
+\newblock Fermionic neural-network states for ab-initio electronic structure.
+\newblock \emph{Nature Communications}, 11, 05 2020.
+\newblock \doi{10.1038/s41467-020-15724-9}.
+
 \bibitem[Deng et~al.(2022)Deng, Shi, and Zhu]{pmlr-v162-deng22b}
 Deng, Z., Shi, J., and Zhu, J.
 \newblock {N}eural{EF}: Deconstructing kernels by deep neural networks.
@@ -58,6 +77,19 @@ Deng, Z., Shi, J., and Zhu, J.
   Machine Learning}, volume 162 of \emph{Proceedings of Machine Learning
   Research}, pp.\  4976--4992. PMLR, 17--23 Jul 2022.
 \newblock URL \url{https://proceedings.mlr.press/v162/deng22b.html}.
+
+\bibitem[Evans(2022)]{evans2022partial}
+Evans, L.~C.
+\newblock \emph{Partial differential equations}, volume~19.
+\newblock American Mathematical Society, 2022.
+
+\bibitem[Feld et~al.(2019)Feld, Aujol, Gilboa, and Papadakis]{Feld_2019}
+Feld, T., Aujol, J.-F., Gilboa, G., and Papadakis, N.
+\newblock Rayleigh quotient minimization for absolutely one-homogeneous
+  functionals.
+\newblock \emph{Inverse Problems}, 35\penalty0 (6):\penalty0 064003, may 2019.
+\newblock \doi{10.1088/1361-6420/ab0cb2}.
+\newblock URL \url{https://dx.doi.org/10.1088/1361-6420/ab0cb2}.
 
 \bibitem[Ford(2015)]{FORD201579}
 Ford, W.
@@ -78,12 +110,43 @@ Gomez-Chova, L., Camps-Valls, G., Munoz-Mari, J., and Calpe, J.
   (3):\penalty0 336--340, 2008.
 \newblock \doi{10.1109/LGRS.2008.916070}.
 
+\bibitem[Halko et~al.(2011)Halko, Martinsson, and Tropp]{10.1137/090771806}
+Halko, N., Martinsson, P.~G., and Tropp, J.~A.
+\newblock Finding structure with randomness: Probabilistic algorithms for
+  constructing approximate matrix decompositions.
+\newblock \emph{SIAM Review}, 53\penalty0 (2):\penalty0 217--288, 2011.
+\newblock \doi{10.1137/090771806}.
+\newblock URL \url{https://doi.org/10.1137/090771806}.
+
 \bibitem[Jin et~al.(2020)Jin, Mattheakis, and
   Protopapas]{Jin2020UnsupervisedNN}
 Jin, H., Mattheakis, M., and Protopapas, P.
 \newblock Unsupervised neural networks for quantum eigenvalue problems.
 \newblock \emph{ArXiv}, abs/2010.05075, 2020.
 \newblock URL \url{https://api.semanticscholar.org/CorpusID:222290530}.
+
+\bibitem[Kostopoulos et~al.(2018)Kostopoulos, Karlos, Kotsiantis, and
+  Ragos]{kostopoulos2018semi}
+Kostopoulos, G., Karlos, S., Kotsiantis, S., and Ragos, O.
+\newblock Semi-supervised regression: A recent review.
+\newblock \emph{Journal of Intelligent \& Fuzzy Systems}, 35\penalty0
+  (2):\penalty0 1483--1500, 2018.
+
+\bibitem[Krizhevsky(2009)]{Krizhevsky2009LearningML}
+Krizhevsky, A.
+\newblock Learning multiple layers of features from tiny images.
+\newblock Technical report, University of Toronto, 2009.
+\newblock URL
+  \url{https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf}.
+
+\bibitem[Kunegis et~al.()Kunegis, Schmidt, Lommatzsch, Lerner, Luca, and
+  Albayrak]{10.1137/1.9781611972801.49}
+Kunegis, J., Schmidt, S., Lommatzsch, A., Lerner, J., Luca, E. W.~D., and
+  Albayrak, S.
+\newblock \emph{Spectral Analysis of Signed Graphs for Clustering, Prediction
+  and Visualization}, pp.\  559--570.
+\newblock \doi{10.1137/1.9781611972801.49}.
+\newblock URL \url{https://epubs.siam.org/doi/abs/10.1137/1.9781611972801.49}.
 
 \bibitem[Lagaris et~al.(1997)Lagaris, Likas, and Fotiadis]{LAGARIS19971}
 Lagaris, I., Likas, A., and Fotiadis, D.
@@ -94,6 +157,11 @@ Lagaris, I., Likas, A., and Fotiadis, D.
 \newblock \doi{https://doi.org/10.1016/S0010-4655(97)00054-4}.
 \newblock URL
   \url{https://www.sciencedirect.com/science/article/pii/S0010465597000544}.
+
+\bibitem[Le(2011)]{le2011applying}
+Le, T.~H.
+\newblock Applying artificial neural networks for face recognition.
+\newblock \emph{Advances in Artificial Neural Systems}, 2011, 2011.
 
 \bibitem[LeCun \& Cortes(2010)LeCun and
   Cortes]{lecun-mnisthandwrittendigit-2010}
@@ -120,6 +188,16 @@ Lyon, R.~J., Stappers, B.~W., Cooper, S., Brooke, J.~M., and Knowles, J.~D.
 \newblock \doi{10.1093/mnras/stw656}.
 \newblock URL \url{https://doi.org/10.1093/mnras/stw656}.
 
+\bibitem[M.~A.~ERICKSON \& LAUB(1995)M.~A.~ERICKSON and
+  LAUB]{doi:10.1080/00207179508921586}
+M.~A.~ERICKSON, R. S.~S. and LAUB, A.~J.
+\newblock Power methods for calculating eigenvalues and eigenvectors of
+  spectral operators on hilbert spaces.
+\newblock \emph{International Journal of Control}, 62\penalty0 (5):\penalty0
+  1117--1128, 1995.
+\newblock \doi{10.1080/00207179508921586}.
+\newblock URL \url{https://doi.org/10.1080/00207179508921586}.
+
 \bibitem[Ng et~al.(2001)Ng, Jordan, and Weiss]{NIPS2001_801272ee}
 Ng, A., Jordan, M., and Weiss, Y.
 \newblock On spectral clustering: Analysis and an algorithm.
@@ -128,6 +206,19 @@ Ng, A., Jordan, M., and Weiss, Y.
   Press, 2001.
 \newblock URL
   \url{https://proceedings.neurips.cc/paper_files/paper/2001/file/801272ee79cfde7fa5960571fee36b9b-Paper.pdf}.
+
+\bibitem[Paszke et~al.(2019)Paszke, Gross, Massa, Lerer, Bradbury, Chanan,
+  Killeen, Lin, Gimelshein, Antiga, Desmaison, Kopf, Yang, DeVito, Raison,
+  Tejani, Chilamkurthy, Steiner, Fang, Bai, and Chintala]{NEURIPS2019_9015}
+Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J., Chanan, G., Killeen,
+  T., Lin, Z., Gimelshein, N., Antiga, L., Desmaison, A., Kopf, A., Yang, E.,
+  DeVito, Z., Raison, M., Tejani, A., Chilamkurthy, S., Steiner, B., Fang, L.,
+  Bai, J., and Chintala, S.
+\newblock Pytorch: An imperative style, high-performance deep learning library.
+\newblock In \emph{Advances in Neural Information Processing Systems 32}, pp.\
+  8024--8035. Curran Associates, Inc., 2019.
+\newblock URL
+  \url{http://papers.neurips.cc/paper/9015-pytorch-an-imperative-style-high-performance-deep-learning-library.pdf}.
 
 \bibitem[Pedregosa et~al.(2011)Pedregosa, Varoquaux, Gramfort, Michel, Thirion,
   Grisel, Blondel, Prettenhofer, Weiss, Dubourg, Vanderplas, Passos,
@@ -139,18 +230,45 @@ Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel,
 \newblock \emph{Journal of Machine Learning Research}, 12:\penalty0 2825--2830,
   2011.
 
-\bibitem[Shaham et~al.(2018)Shaham, Stanton, Li, Basri, Nadler, and
-  Kluger]{shaham2018spectralnet}
-Shaham, U., Stanton, K.~P., Li, H., Basri, R., Nadler, B., and Kluger, Y.
-\newblock {SpectralNet}: Spectral clustering using deep neural networks.
-\newblock In \emph{International Conference on Learning Representations}, 2018.
-\newblock URL \url{https://openreview.net/forum?id=HJ_aoCyRZ}.
+\bibitem[Rosenblatt(1958)]{rosenblatt1958perceptron}
+Rosenblatt, F.
+\newblock {The perceptron: A probabilistic model for information storage and
+  organization in the brain.}
+\newblock \emph{Psychological Review}, 65\penalty0 (6):\penalty0 386--408,
+  1958.
+\newblock ISSN 0033-295X.
+\newblock \doi{10.1037/h0042519}.
+\newblock URL \url{http://dx.doi.org/10.1037/h0042519}.
+
+\bibitem[Samoshyn(2010)]{spotify_dataset}
+Samoshyn, A.
+\newblock Dataset of songs in spotify.
+\newblock 2010.
+\newblock URL
+  \url{https://www.kaggle.com/datasets/mrmorj/dataset-of-songs-in-spotify/data}.
+
+\bibitem[Sejnowski(2018)]{8555495}
+Sejnowski, T.~J.
+\newblock \emph{6 The Cocktail Party Problem}, pp.\  81--90.
+\newblock 2018.
+
+\bibitem[Sheikhpour et~al.(2018)Sheikhpour, Sarram, and
+  Sheikhpour]{sheikhpour2018semi}
+Sheikhpour, R., Sarram, M.~A., and Sheikhpour, E.
+\newblock Semi-supervised sparse feature selection via graph laplacian based
+  scatter matrix for regression problems.
+\newblock \emph{Information Sciences}, 468:\penalty0 14--28, 2018.
+
+\bibitem[Simon et~al.(2022)Simon, Dickens, and Deweese]{simon2022neural}
+Simon, J.~B., Dickens, M., and Deweese, M.
+\newblock Neural tangent kernel eigenvalues accurately predict generalization,
+  2022.
+\newblock URL \url{https://openreview.net/forum?id=lycl1GD7fVP}.
 
 \bibitem[Xiao et~al.(2017)Xiao, Rasul, and Vollgraf]{xiao2017fashionmnist}
 Xiao, H., Rasul, K., and Vollgraf, R.
 \newblock Fashion-{MNIST}: a novel image dataset for benchmarking machine
-  learning algorithms.
-\newblock \emph{arXiv preprint arXiv:1708.07747}, 2017.
+  learning algorithms, 2017.
 \newblock URL \url{https://arxiv.org/abs/1708.07747}.
 
 \end{thebibliography}
