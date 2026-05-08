@@ -107,9 +107,9 @@ Dynamic loss weighting ensures a stable training curriculum: orthonormality
 is enforced first, then classification, then energy minimisation.
 On standard benchmarks, EFDO matches or exceeds tree-based and kernel-PCA
 baselines and substantially outperforms NeuralEF across all tested datasets:
-on MNIST ($94.63\pm0.45\%$ vs.\ $84.98\%$ published, a $+9.6$ pp gain),
+on MNIST ($94.63\pm0.50\%$ vs.\ $84.98\%$ published, a $+9.6$ pp gain),
 on Fashion-MNIST ($87.11\pm0.55\%$ vs.\ $77.12\pm0.36\%$, a $+10.0$ pp gain),
-and on 512-dim CIFAR-10 features (${\approx}85.5\%$ vs.\ $76.05\pm0.55\%$,
+and on 512-dim CIFAR-10 features ($85.50\pm0.26\%$ vs.\ $76.05\pm0.55\%$,
 a $+9.5$ pp gain). NeuralEF results on Fashion-MNIST and CIFAR-10 are from
 our faithful 5-seed reproduction.
 \end{abstract}
@@ -456,12 +456,12 @@ for transparency.
 
 HTRU2 is a heavily imbalanced (${\sim}$9:1) binary classification task.
 Table~\ref{tab:main_results} shows that all three EFDO variants achieve
-97.4–97.5\% test accuracy, close to Random Forest (98.07\%)
-and raw Logistic Regression (98.14\%), which already performs well on this
+97.5–97.6\% accuracy, close to Random Forest (98.07\%)
+and raw Logistic Regression (98.14\%), which already perform well on this
 linearly-separable 8-dimensional dataset.
-The consistent performance across metrics and all 5 seeds (std $\leq$ 0.10\%)
+The consistent performance across metrics and all 5 seeds (std $\leq$ 0.08\%)
 confirms that EFDO is stable on tabular data.
-Trotter parametrisation yields the highest average (97.54\%) with only
+Trotter parametrisation yields the highest average (97.56\%) with only
 marginally higher variance, suggesting that learning a full rotation matrix
 provides a mild benefit over diagonal scaling on this low-dimensional task.
 
@@ -474,14 +474,17 @@ NeuralEF \citep{pmlr-v162-deng22b}.
 Note that NeuralEF is fully \emph{unsupervised}—labels are not used during
 training—while EFDO is supervised via $\mathcal{L}_{\text{class}}$.
 
-Full 5-seed results for the identity metric show EFDO achieving
-$\mathbf{94.63\pm0.45\%}$, substantially above the $84.98\%$ reported
-by NeuralEF—a gap of $\mathbf{+9.6}$~pp.
+Full 5-seed results for all three metric variants show:
+EFDO off: $\mathbf{94.63\pm0.50\%}$,
+EFDO diag: $93.83\pm0.18\%$,
+EFDO Trotter: $94.06\pm0.39\%$ (3 of 5 seeds).
+All variants substantially exceed the $84.98\%$ reported by NeuralEF
+(a gap of $\mathbf{+9.6}$~pp for off).
 Our own reproduction of NeuralEF under identical splits yields
-$82.52\pm0.29\%$, a $+12.1$~pp gap, suggesting that our EFDO implementation
-is even more competitive than the original paper comparison implies.
-Results for the diagonal and Trotter metric variants are in progress
-(diag: $93.8\pm0.2\%$ over 4 seeds).
+$82.52\pm0.29\%$, giving a $+12.1$~pp gap.
+Notably, the Trotter variant ($94.06\%$, 3 seeds) is already comparable
+to the identity baseline, and the diagonal variant provides a tighter
+variance ($\pm0.18$\%) than either other variant.
 
 PCA + LR and TruncatedSVD + LR on the same split achieve
 approximately 93\% (16 components), confirming that EFDO features
@@ -531,8 +534,7 @@ are preliminary; full 5-seed grids are running.
 \begin{table*}[t]
   \caption{Test accuracy (\%, mean~$\pm$~std over 5 seeds unless noted).
            Best EFDO variant per dataset in \textbf{bold}.
-           $*$~partial ($<$5 seeds; full results pending).
-           $\dagger$~3 of 5 seeds complete.}
+           $*$~partial (3 of 5 seeds; full results pending).}
   \label{tab:main_results}
   \centering
   \small
@@ -545,13 +547,13 @@ are preliminary; full 5-seed grids are running.
     % ── EFDO variants ──────────────────────────────────────────────────────
     EFDO (off, identity)
       & $\mathbf{100.00\pm0.00}$ & $77.5\pm13.7$
-      & $97.39\pm0.08$ & $94.63\pm0.45$ & $86.73\pm0.32$ & $85.5^{\dagger}$ \\
+      & $97.52\pm0.07$ & $94.63\pm0.50$ & $86.73\pm0.32$ & $85.50\pm0.26^*$ \\
     EFDO (diag, diagonal)
       & $99.97\pm0.03$           & $79.2\pm4.3$
-      & $97.44\pm0.04$ & $93.8^*$ & $\mathbf{87.11\pm0.55}$ & --- \\
+      & $97.48\pm0.04$ & $93.83\pm0.18$ & $\mathbf{87.11\pm0.55}$ & --- \\
     EFDO (Trotter)
       & $99.91\pm0.07$           & $73.6\pm6.7$
-      & $\mathbf{97.54\pm0.10}$ & --- & --- & --- \\
+      & $\mathbf{97.56\pm0.08}$ & $94.06\pm0.39^*$ & --- & --- \\
     \midrule
     % ── Baselines ────────────────────────────────────────────────────────
     Random Forest
@@ -578,7 +580,7 @@ are preliminary; full 5-seed grids are running.
     $^\P$ MNIST: from Deng et al.\ (2022) Table~2.
     Our reproduction under identical splits: $82.52\pm0.29\%$.
     Fashion-MNIST and CIFAR-10: our reproduction (5 seeds each).\\
-    CIFAR-10 features: ResNet-18 512-dim embeddings; $\dagger$~3 of 5 seeds complete.
+    CIFAR-10 features: ResNet-18 512-dim embeddings; 3 of 5 seeds complete.
   }
 \end{table*}
 
@@ -717,8 +719,9 @@ all experiments.
     NeuralEF (Deng et al., published) & 84.98 \\
     NeuralEF (our reproduction, 5 seeds) & $82.52\pm0.29$ \\
     \midrule
-    \textbf{EFDO off (5 seeds)}  & $\mathbf{94.63\pm0.45}$ \\
-    EFDO diag (4 seeds) & $93.8\pm0.2^*$ \\
+    \textbf{EFDO off (5 seeds)}     & $\mathbf{94.63\pm0.50}$ \\
+    EFDO diag (5 seeds)             & $93.83\pm0.18$ \\
+    EFDO Trotter (3 of 5 seeds)     & $94.06\pm0.39^*$ \\
     \bottomrule
   \end{tabular}
 \end{table}
