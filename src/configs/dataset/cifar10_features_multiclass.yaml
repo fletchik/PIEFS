@@ -1,0 +1,9 @@
+# CIFAR-10 pre-extracted ResNet-18 features (512-dim, 10-class multiclass)
+# Run scripts/extract_cnn_features.py first to populate data/cifar10_features/
+name: cifar10_features
+root: data/cifar10_features
+task: multiclass
+val_fraction: 0.1
+standardize: true
+input_dim: 512
+num_classes: 10

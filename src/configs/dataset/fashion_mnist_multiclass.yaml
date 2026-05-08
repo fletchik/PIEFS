@@ -1,0 +1,8 @@
+# Fashion-MNIST 10-class multiclass (harder drop-in for MNIST)
+name: fashion_mnist
+root: data/fashion_mnist
+task: multiclass
+val_fraction: 0.1
+standardize: true
+input_dim: 784
+num_classes: 10

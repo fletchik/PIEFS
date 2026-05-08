@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
 
-DatasetName = Literal['mnist', 'cifar10']
+DatasetName = Literal['mnist', 'fashion_mnist', 'cifar10']
 TaskType = Literal['binary', 'multiclass']
 
 
@@ -20,7 +20,7 @@ class TorchvisionFlatDataset(Dataset):
     labels are remapped to {0, 1}.
 
     Args:
-        name: "mnist" or "cifar10".
+        name: "mnist", "fashion_mnist", or "cifar10".
         split: "train", "val", or "test".
         root: Root directory for torchvision downloads.
         task: "binary" or "multiclass".
@@ -97,9 +97,11 @@ class TorchvisionFlatDataset(Dataset):
 
         if name == 'mnist':
             return tvd.MNIST(root, train=train, download=True, transform=transform)
+        if name == 'fashion_mnist':
+            return tvd.FashionMNIST(root, train=train, download=True, transform=transform)
         if name == 'cifar10':
             return tvd.CIFAR10(root, train=train, download=True, transform=transform)
-        raise ValueError(f"Unknown dataset '{name}'. Expected 'mnist' or 'cifar10'.")
+        raise ValueError(f"Unknown dataset '{name}'. Expected 'mnist', 'fashion_mnist', or 'cifar10'.")
 
     @staticmethod
     def _flatten(dataset: Dataset) -> tuple[torch.Tensor, torch.Tensor]:

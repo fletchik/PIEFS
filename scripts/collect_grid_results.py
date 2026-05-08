@@ -51,6 +51,7 @@ def load_run(run_dir: Path) -> dict | None:
 
 KNOWN_DATASETS = [
     'two_moon', 'circles', 'htru2', 'mnist_mc', 'mnist_binary',
+    'fashion_mnist', 'cifar10_features', 'spotify_mc', 'spotify_bin',
     'lissajous', 'cifar10_binary',
 ]
 KNOWN_METRICS = [

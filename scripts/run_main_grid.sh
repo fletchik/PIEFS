@@ -45,11 +45,13 @@ STEPS="${STEPS:-60000}"            # total training steps per run
 ds_config() {
     local ds=$1
     case "$ds" in
-        two_moon)   echo "dataset=two_moon  model.task=binary  model.K=6";;
-        circles)    echo "dataset=circles   model.task=binary  model.K=6";;
-        htru2)      echo "dataset=htru2     model.task=binary  model.K=6";;
-        mnist_mc)   echo "dataset=mnist_multiclass  model.task=multiclass  model.K=16  trainer.total_steps=120000";;
-        *)          echo "dataset=${ds}";;
+        two_moon)       echo "dataset=two_moon  model.task=binary  model.K=6";;
+        circles)        echo "dataset=circles   model.task=binary  model.K=6";;
+        htru2)          echo "dataset=htru2     model.task=binary  model.K=6";;
+        mnist_mc)       echo "dataset=mnist_multiclass  model.task=multiclass  model.K=16  trainer.total_steps=120000";;
+        fashion_mnist)      echo "dataset=fashion_mnist_multiclass  model.task=multiclass  model.K=16  trainer.total_steps=120000";;
+        cifar10_features)   echo "dataset=cifar10_features_multiclass  model.task=multiclass  model.K=16  trainer.total_steps=120000";;
+        *)                  echo "dataset=${ds}";;
     esac
 }
 
@@ -94,8 +96,7 @@ for ds in $DATASETS; do
                 model.metric_type=$metric \
                 trainer.seed=$seed \
                 trainer.total_steps=$STEPS \
-                model.output_bias=false \
-                writer.mode=online"
+                writer.mode=${WANDB_MODE:-online}"
 
             if [[ "$PARALLEL" == "1" ]]; then
                 eval "$cmd" &>"logs/${run_id}.log" &

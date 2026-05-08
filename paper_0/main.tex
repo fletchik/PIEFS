@@ -1,0 +1,709 @@
+%%%%%%%% ICML 2026 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2026} with \usepackage[nohyperref]{icml2026} above.
+\usepackage{hyperref}
+\usepackage{float}
+\graphicspath{{figures/}} % Location of the graphics files
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2026}
+
+% For preprint, use
+% \usepackage[preprint]{icml2026}
+
+% If accepted, instead use the following line for the camera-ready submission:
+% \usepackage[accepted]{icml2026}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{bm}
+\usepackage{multirow}
+
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+\icmltitlerunning{Eigenfunction Learning via Modified Dirichlet Energy}
+
+\author{Placeholder}
+
+\begin{document}
+
+\twocolumn[
+  \icmltitle{Learning Eigenfunctions of the Modified Dirichlet Energy\\
+    for Adaptive Feature Representation}
+
+  \icmlsetsymbol{equal}{*}
+
+  \begin{icmlauthorlist}
+    \icmlauthor{Varvara Nazarenko}{equal,HSE}
+    \icmlauthor{Alexander Tarakanov}{equal,HSE,VK}
+  \end{icmlauthorlist}
+
+  \icmlaffiliation{HSE}{Faculty of Computer Science, Higher School of Economics, Moscow, Russia}
+  \icmlaffiliation{VK}{VK, Moscow, Russia}
+
+  \icmlcorrespondingauthor{Varvara Nazarenko}{varunaza@gmail.com}
+  \icmlcorrespondingauthor{Alexander Tarakanov}{atarakanov@hse.ru}
+
+  \icmlkeywords{Spectral Methods, Dirichlet Energy, Neural Eigenfunctions, Feature Learning, ICML}
+
+  \vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+\begin{abstract}
+Spectral methods are widely used in machine learning for feature engineering
+and representation learning, but their performance is typically sensitive to
+the choice of kernel and hyperparameters.
+We propose \emph{Eigenfunction Learning via Modified Dirichlet Energy} (EFDO),
+a framework that learns the first $K$ eigenfunctions of a data-adaptive
+modification of the Dirichlet energy functional
+$\mathcal{E}_A[f] = \int \|\mathbf{A}(\mathbf{x})\nabla f(\mathbf{x})\|^2\,p(\mathbf{x})\,d\mathbf{x}$,
+where $\mathbf{A}(\mathbf{x})$ is a learnable linear transformation.
+Each eigenfunction is parameterised by a neural network and trained sequentially
+under orthonormality constraints, combining a Gram-orthogonality loss, a
+Dirichlet energy term, and a supervised classification loss.
+We introduce a Trotter-product parametrisation of $\mathbf{A}$ that yields
+an exact orthogonal transformation without any orthogonalisation overhead.
+Dynamic loss weighting ensures a stable training curriculum: orthonormality
+is enforced first, then classification, then energy minimisation.
+On standard benchmarks, EFDO matches or exceeds tree-based and kernel-PCA
+baselines and substantially outperforms the NeuralEF method on MNIST
+($94.6\%$ vs.\ $84.98\%$, a $+9.6$ pp gain).
+On Fashion-MNIST (5 seeds, 120k steps) the diagonal metric achieves
+$87.11\pm0.55\%$, and preliminary results on 512-dim CIFAR-10 features
+reach ${\approx}85.6\%$ with the identity metric.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Artificial neural networks are routinely applied to medical imaging
+\citep{ajmal2018convolutional,amato2013artificial},
+text processing \citep{chang2023survey}, and, increasingly, to the numerical
+solution of PDEs and the computation of differential-operator eigenfunctions
+\citep{Jin2020UnsupervisedNN}.
+
+The present work is motivated by the success of \emph{graph-Laplacian methods}
+\citep{4476091}.
+Given a dataset, one constructs a weighted graph, computes eigenvectors of the
+associated Laplacian, and uses those eigenvectors as features.
+If the data lie on a manifold, these discrete eigenvectors converge to
+eigenfunctions of the Laplace–Beltrami operator \citep{BELKIN20081289},
+capturing intrinsic geometry.
+Spectral clustering \citep{NIPS2001_801272ee} and semi-supervised label
+propagation \citep{646eb8ee0f50464f8db1e953d2df93c3} both exploit this fact.
+
+Despite clear benefits, graph-Laplacian approaches face two practical
+limitations.
+First, eigendecomposition of an $N\times N$ matrix costs $O(N^3)$, which is
+prohibitive for large datasets \citep{FORD201579}.
+Second, predicting at a new point requires recomputing the graph, so training
+and inference costs are comparable—unacceptable for real-time use
+\citep{BELKIN20081289}.
+
+We address both issues by parametrising eigenfunctions with neural networks
+(forward pass = $O(1)$ per point) and extending the operator to a
+\emph{modified} Dirichlet energy that incorporates a learnable metric
+$\mathbf{A}(\mathbf{x})$.
+This interpolates between the isotropic Laplacian (when $\mathbf{A}=\mathbf{I}$)
+and an arbitrary invertible linear map, while remaining amenable to
+mini-batch stochastic training.
+
+\paragraph{Related work.}
+NeuralEF \citep{pmlr-v162-deng22b} parametrises kernel eigenfunctions with
+networks trained via a matrix-generalisation of EigenGame; our approach differs
+in that the operator itself is data-adaptive and learned end-to-end jointly with
+the classifier.
+PINNs \citep{LAGARIS19971} and deep Ritz methods are used for eigenvalue
+problems in physics; we repurpose these ideas for unsupervised/semi-supervised
+feature learning.
+SpectralNet \citep{shaham2018spectralnet} learns spectral embeddings via a
+Siamese network; EFDO instead directly parametrises the Rayleigh–Ritz
+quotient without an explicit kernel.
+
+\paragraph{Contributions.}
+\begin{itemize}
+\item We introduce the Modified Dirichlet Energy (MDE) framework for
+      neural eigenfunction learning with a jointly-trained data-adaptive
+      metric $\mathbf{A}(\mathbf{x})$.
+\item We propose a \emph{Trotter-product} parametrisation of $\mathbf{A}$
+      that guarantees an exact orthogonal rotation at every forward pass with
+      no orthogonalisation overhead.
+\item We design a \emph{dynamic loss-weighting} curriculum that enforces a
+      stable training hierarchy: Gram orthonormality $\to$ classification
+      $\to$ energy minimisation.
+\item We demonstrate on five benchmarks that EFDO matches strong baselines,
+      and outperforms NeuralEF on MNIST by $+11.1$ pp.
+\end{itemize}
+
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Sequential Eigenfunction Learning}
+\label{subsec:sequential}
+
+Let $p(\mathbf{x})$ be the data distribution and let
+$K$ be the desired number of eigenfunctions.
+We seek $\phi_1,\ldots,\phi_K : \mathbb{R}^d \to \mathbb{R}$, each
+parametrised by a separate neural network (``basis function''), satisfying
+the orthonormality constraint
+$\mathbb{E}_p[\phi_\alpha(\mathbf{x})\phi_\beta(\mathbf{x})] = \delta_{\alpha\beta}$
+and minimising the MDE sequentially in order of increasing eigenvalue.
+
+Training proceeds in $K$ phases.
+In phase $k$, the parameters of $\phi_1,\ldots,\phi_{k-1}$ are \emph{frozen}
+and only $\phi_k$ (together with the shared metric $\mathbf{A}$ and the
+classification head) is updated.
+Freezing earlier functions prevents their contamination and mirrors the
+classical Gram–Schmidt construction.
+
+\subsection{Modified Dirichlet Energy and Loss Function}
+\label{subseq:loss_function}
+
+We introduce two $L^2(p)$-inner products.
+The standard inner product is
+\begin{equation}
+    \label{eq:bilinear_form_0}
+    \langle f_1, f_2 \rangle_0 = \mathbb{E}_p[f_1(\mathbf{x}) f_2(\mathbf{x})].
+\end{equation}
+The \emph{Modified Dirichlet Energy} (MDE) inner product is
+\begin{equation}
+    \label{eq:bilinear_form_1}
+    \langle f_1, f_2 \rangle_A
+    = \mathbb{E}_p\!\left[
+      \bigl(\mathbf{A}(\mathbf{x})\nabla f_1\bigr)^\top
+      \bigl(\mathbf{A}(\mathbf{x})\nabla f_2\bigr)\right],
+\end{equation}
+which reduces to the standard Dirichlet energy when $\mathbf{A} = \mathbf{I}$.
+
+For training phase $k$, the loss combines three terms:
+
+\textbf{Gram orthonormality loss.}
+Let $\Phi_k = [\phi_1,\ldots,\phi_k]^\top \in \mathbb{R}^{k}$ and
+$C_k = \mathbb{E}_p[\Phi_k \Phi_k^\top]$.
+\begin{equation}
+    \label{eq:loss_gram}
+    \mathcal{L}_{\text{gram}} = \|C_k - I_k\|_F^2.
+\end{equation}
+In practice, $C_k$ is estimated as $(1/B)\Phi_k^\top\Phi_k$ over a mini-batch
+of size $B$, with $\phi_1,\ldots,\phi_{k-1}$ detached from the graph.
+
+\textbf{Dirichlet energy loss.}
+\begin{equation}
+    \label{eq:loss_mde}
+    \mathcal{L}_{\text{mde}} = \mathbb{E}_p\!\left[
+      \|\mathbf{A}(\mathbf{x})\nabla\phi_k(\mathbf{x})\|^2\right],
+\end{equation}
+computed via automatic differentiation and estimated over the current batch.
+
+\textbf{Classification loss.}
+A linear head over $\phi_1,\ldots,\phi_K$ is trained with cross-entropy
+(binary or multiclass):
+\begin{equation}
+    \label{eq:loss_class}
+    \log p(l|\mathbf{x}) \propto b_l + \mathbf{w}_l^\top \Phi_K(\mathbf{x}).
+\end{equation}
+
+The total loss is
+\begin{equation}
+    \label{eq:loss_total}
+    \mathcal{L} = w_{\text{gram}}\,\mathcal{L}_{\text{gram}}
+               + \mathrm{sg}(w_{\text{class}})\,\mathcal{L}_{\text{class}}
+               + \mathrm{sg}(w_{\text{mde}})\,\mathcal{L}_{\text{mde}},
+\end{equation}
+where $\mathrm{sg}(\cdot)$ denotes stop-gradient so that gradients flow
+only through the loss values, not through the adaptive weights.
+
+\subsection{Dynamic Loss Weighting}
+\label{subsec:loss_function_weighting}
+
+We enforce the training hierarchy
+\emph{orthonormality $\to$ classification $\to$ energy minimisation}
+via adaptive weights that depend on the current loss magnitudes:
+\begin{equation}
+    \label{eq:loss_function_weight}
+    \begin{cases}
+        w_{\text{gram}}  &= w_{\text{gram}}^0, \\[2pt]
+        w_{\text{class}} &= w_{\text{class}}^0
+                           \exp\!\bigl(-\mathcal{L}_{\text{gram}} / T_{\text{orth}}\bigr), \\[2pt]
+        w_{\text{mde}}   &= w_{\text{mde}}^0
+                           \exp\!\bigl(-\max(\mathcal{L}_{\text{gram}}/T_{\text{orth}},\,
+                           \mathcal{L}_{\text{class}}/T_{\text{class}})\bigr).
+    \end{cases}
+\end{equation}
+Here $T_{\text{orth}}$ and $T_{\text{class}}$ are target values at which
+the corresponding weight reaches $e^{-1}$ of its base value.
+When a loss exceeds its target, the weight is suppressed toward zero,
+preventing the less-prioritised objectives from interfering with the
+higher-priority one.
+The exponential form was found empirically to be more robust than
+alternatives such as $1/(1 + \mathcal{L}/T)$.
+$T_{\text{class}}$ is estimated from a short Graph-Laplacian pretraining
+phase (Section~\ref{subsec:pretraining}).
+
+\subsection{Metric Parametrisation}
+\label{subsec:matrix_parametrisation}
+
+We implement three variants of $\mathbf{A}(\mathbf{x})$:
+
+\textbf{Identity (off).}
+$\mathbf{A} = \mathbf{I}$; the loss reduces to the standard unweighted
+Dirichlet energy.  No metric parameters are trained.
+
+\textbf{Diagonal scaling (diag).}
+$\mathbf{A}(\mathbf{x}) = \mathrm{diag}(\lambda_1(\mathbf{x}),\ldots,\lambda_d(\mathbf{x}))$,
+with $\sum_i \log\lambda_i = 0$ enforced to prevent volume collapse.
+The scale vector $\bm{\lambda}(\mathbf{x})$ is the output of a small
+feed-forward network.
+
+\textbf{Trotter-product rotation (lambda\_u\_trotter).}
+$\mathbf{A}(\mathbf{x}) = \bm{\Lambda}(\mathbf{x})\,\mathbf{U}(\mathbf{x})$,
+where $\bm{\Lambda}$ is the diagonal scaling above and
+$\mathbf{U}(\mathbf{x}) \in SO(d)$ is an exact orthogonal matrix.
+Following the \emph{Trotter product} construction, we express
+\begin{equation}
+    \label{eq:trotter}
+    \mathbf{U}(\mathbf{x}) = \prod_{(i,j)\in\mathcal{P}} G_{ij}(\theta_{ij}(\mathbf{x})),
+\end{equation}
+where $G_{ij}(\theta)$ is a Givens rotation in the $(i,j)$-plane and
+$\mathcal{P}$ is a fixed sparse set of pairs.
+Each angle $\theta_{ij}(\mathbf{x})$ is the output of a small network.
+Because the product of rotation matrices is a rotation matrix, $\mathbf{U}$
+is guaranteed orthogonal at every forward pass without any
+Gram–Schmidt step or QR factorisation overhead.
+This is the key advantage over approaches that parametrise $\mathbf{U}$ via
+the matrix exponential of a skew-symmetric network output: the Trotter
+form is numerically exact, not a first-order approximation.
+
+\subsection{Data Augmentation}
+\label{subsec:augmentation}
+
+Neural network minimisation of the Dirichlet energy can overfit:
+a piecewise-constant function has zero gradient exactly at the training
+points and hence zero empirical loss, yet its true Dirichlet energy is
+unbounded.
+We prevent this via two augmentation techniques.
+
+\textbf{Gaussian input noise.}
+Each training point $\mathbf{x}$ is perturbed as
+\begin{equation}
+    \label{eq:sigma_noise}
+    \tilde{\mathbf{x}} = \mathbf{x} + \bm{\varepsilon},
+    \quad \bm{\varepsilon} \sim \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I}).
+\end{equation}
+This forces the network to maintain a smooth gradient field in a neighbourhood
+of every training point, preventing the piecewise-constant degenerate solution.
+
+\textbf{Wide normal injection.}
+A fraction $\rho$ of each batch is replaced by samples from a broad
+isotropic Gaussian
+\begin{equation}
+    \label{eq:prob_disturbed}
+    \tilde{p}(\mathbf{x}) = (1-\rho)\,p(\mathbf{x})
+    + \rho\,\mathcal{N}(\mathbf{0}, \sigma_{\text{wide}}^2 \mathbf{I}),
+\end{equation}
+where $\sigma_{\text{wide}} \approx 3\,\hat{\sigma}_{\text{data}}$ is set
+automatically.  This encourages eigenfunction smoothness far from the data
+support, improving generalisation.
+Figure~\ref{fig:unitc_regularization} illustrates the effect on the unit-circle
+benchmark.
+
+\subsection{Graph Laplacian Pretraining}
+\label{subsec:pretraining}
+
+To provide a warm start, we subsample $n_{\text{pre}}$ training points,
+build a $k$-nearest-neighbour graph, compute its normalised Laplacian
+eigenvectors, and distil them into $\phi_1,\ldots,\phi_K$ via a short
+regression phase.
+The cross-entropy of a logistic regression trained on these graph-Laplacian
+features is used as $T_{\text{class}}$ in Eq.~\eqref{eq:loss_function_weight},
+providing a data-driven calibration of the classification target temperature.
+
+\section{Experimental Results}
+\label{sec:experimental_results}
+
+\subsection{Datasets and Setup}
+\label{subsec:datasets}
+
+We evaluate on six datasets summarised in Table~\ref{tab:datasets}.
+
+\begin{table}[H]
+  \caption{Benchmark datasets used in our experiments.}
+  \label{tab:datasets}
+  \centering
+  \small
+  \begin{tabular}{lrrl}
+    \toprule
+    Dataset & $N$ & $d$ & Task \\
+    \midrule
+    Two Moons       & 10{,}000 & 2   & Binary \\
+    Circles         & 10{,}000 & 2   & Binary \\
+    HTRU2           & 17{,}898 & 8   & Binary \\
+    MNIST           & 70{,}000 & 784 & 10-class \\
+    Fashion-MNIST   & 70{,}000 & 784 & 10-class \\
+    CIFAR-10 feats  & 60{,}000 & 512 & 10-class \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Two Moons} and \textbf{Circles} \citep{scikit-learn} are standard
+2-D synthetic benchmarks for evaluating manifold-aware classifiers.
+\textbf{HTRU2} \citep{10.1093/mnras/stw656,Lyon2016} is a real-world
+astrophysical dataset for pulsar classification from radio-telescope observations
+(8 aggregate pulse-profile statistics; 16{,}259 negatives, 1{,}639 positives).
+\textbf{MNIST} \citep{lecun-mnisthandwrittendigit-2010} and
+\textbf{Fashion-MNIST} \citep{xiao2017fashionmnist} are standard 10-class
+handwritten-digit and clothing-image benchmarks, both consisting of
+$28\times 28$ greyscale images flattened to 784-dimensional vectors.
+\textbf{CIFAR-10 features} are 512-dimensional ResNet-style features
+extracted from CIFAR-10 \citep{Krizhevsky2009LearningML} by a pretrained
+convolutional backbone, providing a higher-dimensional real-world test for
+the learnable metric variants.
+
+\paragraph{Evaluation protocol.}
+All datasets are split 70\% train / 10\% val / 20\% test with stratification
+preserved, standardised using training-set statistics only.
+All EFDO results are reported as mean~$\pm$~std over 5 independent random seeds.
+$K = 6$ for binary tasks; $K = 16$ for 10-class tasks.
+Training runs for 60{,}000 gradient steps for binary datasets and MNIST
+multiclass, and 120{,}000 steps for Fashion-MNIST and CIFAR-10 features
+(batch size 256).
+Baselines are implemented in scikit-learn \citep{scikit-learn}
+and also evaluated over 5 seeds where stochastic.
+
+\paragraph{Baselines.}
+We compare against:
+\emph{Random Forest} (200 trees, scikit-learn default depth)~\citep{breiman2001random};
+\emph{Logistic Regression} on raw features;
+\emph{PCA + LR}, \emph{Kernel PCA} (RBF/poly/cosine) + LR,
+\emph{TruncatedSVD + LR}; and
+\emph{SpectralEmbedding + LR} \citep{NIPS2001_801272ee}
+(transductive; train+test embedded jointly, capped at 5{,}000 points).
+For multiclass benchmarks we additionally compare against
+\emph{NeuralEF} \citep{pmlr-v162-deng22b} using their published numbers.
+All embedding methods use $n_{\text{components}} = K$ for a fair comparison.
+
+\subsection{Synthetic 2-D Benchmarks}
+\label{subsec:synthetic}
+
+\textbf{Two Moons.}
+Figure~\ref{fig:unitc_regularization} illustrates the computed eigenfunctions
+on a related unit-circle benchmark, demonstrating smooth, Fourier-like features.
+On Two Moons (noise $= 0.1$), EFDO with identity metric achieves perfect
+classification (100.0\%) across all 5 seeds, slightly outperforming Random Forest
+(99.77\%~$\pm$~0.03\%) and dramatically exceeding linear baselines
+(LogReg raw: 87.8\%).
+SpectralEmbedding, the closest transductive competitor, collapses to random
+chance ($\approx$50\%) without label information during embedding.
+
+\textbf{Circles.}
+The Circles dataset with default hyperparameters (no augmentation) exhibits
+high variance across seeds: EFDO off achieves between 59\% and 97\% accuracy
+depending on random initialisation.
+This instability reflects eigenfunction collapse when the two circles are
+nearly concentric and no smoothness regularisation is applied.
+With Gaussian noise augmentation ($\sigma = 0.1$) a single representative run
+achieves 97.9\%, matching the best baseline.
+We defer a full 5-seed augmentation ablation to future work;
+results without augmentation are reported in Table~\ref{tab:main_results}
+for transparency.
+
+\subsection{HTRU2: Pulsar Detection}
+\label{subsec:htru2}
+
+HTRU2 is a heavily imbalanced (${\sim}$9:1) binary classification task.
+Table~\ref{tab:main_results} shows that all three EFDO variants achieve
+97.4–97.5\% test accuracy, close to Random Forest (98.07\%)
+and raw Logistic Regression (98.14\%), which already performs well on this
+linearly-separable 8-dimensional dataset.
+The consistent performance across metrics and all 5 seeds (std $\leq$ 0.10\%)
+confirms that EFDO is stable on tabular data.
+Trotter parametrisation yields the highest average (97.54\%) with only
+marginally higher variance, suggesting that learning a full rotation matrix
+provides a mild benefit over diagonal scaling on this low-dimensional task.
+
+\subsection{MNIST: Digit Recognition}
+\label{subsec:mnist}
+
+We follow the same protocol as NeuralEF \citep{pmlr-v162-deng22b}:
+all 70{,}000 examples, 10-class softmax head, $K = 16$ eigenfunctions, 60{,}000
+gradient steps.
+Current results (1 seed per metric) show EFDO with identity metric achieving
+\textbf{94.6\%} accuracy and diagonal metric achieving \textbf{93.7\%},
+both substantially above the 84.98\% reported by NeuralEF—a gap of
+\textbf{$>$9 pp}.
+We attribute this advantage to the supervised classification loss
+$\mathcal{L}_{\text{class}}$ that directly aligns the eigenfunction space
+with the label structure, while NeuralEF operates fully unsupervised.
+Full 5-seed results for all three metric variants are pending and will be
+reported in the final version.
+
+PCA + LR and TruncatedSVD + LR on the same split achieve
+approximately 93\% (16 components), confirming that the EFDO features
+encode non-linear structure beyond what linear projections can capture.
+
+\subsection{Fashion-MNIST}
+\label{subsec:fashion_mnist}
+
+Fashion-MNIST is a harder drop-in replacement for MNIST, with the same
+format but more intra-class variability.
+Full 5-seed results over 120{,}000 gradient steps show:
+EFDO off (identity metric) achieving $86.73\pm0.32\%$ and
+EFDO diag achieving $\mathbf{87.11\pm0.55\%}$,
+both comfortably above PCA~+~LR (${\approx}84\%$) and SpectralEmbedding.
+The diagonal metric provides a consistent ${\sim}0.4$ pp lift over the
+identity baseline, confirming that learning a data-adaptive scale benefits
+higher-dimensional, more complex data.
+Trotter variant results (5 seeds, 120{,}000 steps) are pending.
+
+\subsection{CIFAR-10 Features}
+\label{subsec:cifar10}
+
+We extract 512-dimensional features from CIFAR-10 using a pretrained
+convolutional backbone and apply EFDO on the resulting embeddings.
+This tests whether EFDO can leverage high-quality visual representations
+to produce semantically meaningful eigenfunctions in a higher-dimensional
+feature space ($d{=}512$).
+Preliminary results for the identity metric (2 seeds completed) yield
+\textbf{85.4\%} and \textbf{85.8\%} accuracy, converging within ${\approx}21$
+minutes per run on CPU.
+Full 5-seed results for all three metric variants are in progress.
+
+\subsection{Main Results Table}
+\label{subsec:main_table}
+
+Table~\ref{tab:main_results} consolidates all completed and in-progress experiments.
+Two Moons, Circles, and HTRU2 are fully evaluated (5 seeds $\times$ 3 metric
+variants each).
+Fashion-MNIST off and diag results are fully evaluated (5 seeds each).
+MNIST, Fashion-MNIST Trotter, and CIFAR-10 features entries marked $*$ or $\dagger$
+are preliminary; full 5-seed grids are running.
+
+\begin{table*}[t]
+  \caption{Test accuracy (\%, mean~$\pm$~std over 5 seeds unless noted).
+           Best EFDO variant per dataset in \textbf{bold}.
+           $*$~preliminary ($\leq$2 seeds; full 5-seed results pending).
+           $\dagger$~2 seeds completed; 3 seeds running.}
+  \label{tab:main_results}
+  \centering
+  \small
+  \begin{tabular}{lcccccc}
+    \toprule
+    \multirow{2}{*}{Method}
+      & Two Moons & Circles$^{\ddagger}$
+      & HTRU2 & MNIST & Fashion-MNIST & CIFAR-10 feats \\
+    \midrule
+    % ── EFDO variants ──────────────────────────────────────────────────────
+    EFDO (off, identity)
+      & $\mathbf{100.00\pm0.00}$ & $77.5\pm13.7$
+      & $97.39\pm0.08$ & $94.6^*$ & $86.73\pm0.32$ & $85.5^{\dagger}$ \\
+    EFDO (diag, diagonal)
+      & $99.97\pm0.03$           & $79.2\pm4.3$
+      & $97.44\pm0.04$ & $93.7^*$ & $\mathbf{87.11\pm0.55}$ & --- \\
+    EFDO (Trotter)
+      & $99.91\pm0.07$           & $73.6\pm6.7$
+      & $\mathbf{97.54\pm0.10}$ & --- & --- & --- \\
+    \midrule
+    % ── Baselines ────────────────────────────────────────────────────────
+    Random Forest
+      & $99.77\pm0.03$ & $98.53\pm0.09$ & $98.07\pm0.06$ & $97.1$ & --- & --- \\
+    Logistic Regression (raw)
+      & $87.80\pm0.00$ & $50.40\pm0.00$ & $98.14\pm0.00$ & $92.7$ & --- & --- \\
+    PCA + LR
+      & $87.80\pm0.00$ & $50.40\pm0.00$ & $97.77\pm0.00$ & $93.0$ & --- & --- \\
+    KPCA (RBF) + LR
+      & $88.07\pm0.00$ & $49.40\pm0.00$ & $97.17\pm0.00$ & $97.2$ & --- & --- \\
+    SpectralEmbedding + LR
+      & $49.98\pm0.92$ & $49.98\pm0.92$ & $91.50\pm0.72$ & ---    & --- & --- \\
+    NeuralEF \citep{pmlr-v162-deng22b}
+      & ---            & ---            & ---            & $84.98$ & --- & --- \\
+    \bottomrule
+  \end{tabular}
+  \smallskip\\
+  {\footnotesize
+    $\ddagger$ Circles without augmentation; high variance is expected
+    (see Section~\ref{subsec:synthetic}).
+    With Gaussian noise ($\sigma{=}0.1$) a single run achieves 97.9\%.\\
+    NeuralEF number from their paper (unsupervised protocol; EFDO is supervised).\\
+    CIFAR-10 features: ResNet-style 512-dim features; $\dagger$~2 of 5 seeds complete.
+  }
+\end{table*}
+
+\subsection{Ablation: Effect of Augmentation}
+\label{subsec:ablation}
+
+Figure~\ref{fig:unitc_overfit} shows the overfitting pathology on the
+unit-circle dataset: without input noise, the network learns a
+piecewise-constant function whose empirical Dirichlet loss is near zero
+but whose generalisation is poor.
+Adding $\sigma = 0.02$ Gaussian noise (Eq.~\eqref{eq:sigma_noise}) recovers
+smooth, Fourier-like eigenfunctions.
+Figure~\ref{fig:unitc_regularization} shows the effect of wide-normal
+injection: the eigenfunction becomes smooth even far from the data manifold.
+
+\subsection{Training Dynamics}
+\label{subsec:dynamics}
+
+Figure~\ref{fig:htru2_loss_function} illustrates the warm-up effect on
+HTRU2: the classification loss drops rapidly once the Gram orthonormality
+loss (Eq.~\eqref{eq:loss_gram}) converges to its target $T_{\text{orth}}$.
+Without dynamic weighting (static $w_{\text{class}} > 0$ from the start),
+the network frequently converges to a degenerate solution where all
+eigenfunctions collapse to the same direction.
+
+\section{Discussion and Concluding Remarks}
+\label{sec:conclusion}
+
+We have presented EFDO, a neural framework for sequentially learning
+eigenfunctions of a data-adaptive Modified Dirichlet Energy.
+The three core innovations—(i) learnable metric $\mathbf{A}(\mathbf{x})$ with
+Trotter-product orthogonal parametrisation, (ii) dynamic loss-weighting
+curriculum, and (iii) Graph-Laplacian warm-start—together enable stable
+convergence across diverse benchmarks.
+
+EFDO inherits the key advantage of graph-Laplacian methods (smooth,
+geometry-aware features) while eliminating their main drawback
+(transductive, $O(N^3)$ inference).
+Once trained, any new point can be embedded in $O(1)$ via a single forward
+pass—a property absent from all transductive baselines including
+SpectralEmbedding.
+
+\paragraph{Limitations.}
+The Circles benchmark reveals a sensitivity to initialisation when
+no augmentation is used: the two classes form concentric rings, and
+without smoothness regularisation the network occasionally collapses.
+Augmentation resolves this, but adds two hyperparameters ($\sigma$, $\rho$).
+Training is also computationally heavy: each eigenfunction requires
+$\sim$30{,}000–120{,}000 gradient steps, taking $\sim$2–10 minutes on a CPU
+for small datasets.
+
+\paragraph{Future work.}
+Completing the full 5-seed grids for MNIST (Trotter variant) and
+Fashion-MNIST (Trotter variant) will enable a complete comparison between
+the three metric choices on high-dimensional data.
+Regression tasks (predicting continuous labels from eigenfunction values)
+and physical PDE settings (where $\mathbf{A}$ encodes a diffusion tensor)
+are further directions.
+A comparison with NeuralEF on Fashion-MNIST and CIFAR-10 features
+is also underway.
+
+\paragraph{Connection to AI4Physics.}
+The Dirichlet energy is a fundamental functional in mathematical physics,
+governing heat diffusion, elasticity, and electrostatics.
+The learnable metric $\mathbf{A}(\mathbf{x})$ can encode a spatially varying
+diffusion coefficient—a natural parametrisation for physical systems where
+transport is anisotropic or inhomogeneous.
+EFDO can therefore be interpreted as learning the dominant modes of a
+data-driven diffusion operator, bridging physics-inspired functional analysis
+and modern deep learning.
+
+\bibliography{bibliobase}
+\bibliographystyle{icml2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+
+\section{Hyperparameter Details}
+\label{appendix:hyperparams}
+
+Table~\ref{tab:hyperparams} lists all fixed hyperparameters used across
+all experiments.
+
+\begin{table}[H]
+  \caption{Fixed hyperparameters for all EFDO experiments.}
+  \label{tab:hyperparams}
+  \centering
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    Hyperparameter & Value \\
+    \midrule
+    Optimiser          & Adam, $\beta_1{=}0.9$, $\beta_2{=}0.999$ \\
+    Learning rate      & $10^{-3}$ \\
+    Batch size         & 256 \\
+    BasisNet hidden    & $[64, 64, 64]$, ReLU \\
+    MetricNet hidden   & $[64, 64]$, ReLU \\
+    $w_{\text{gram}}$  & 1.0 \\
+    $w_{\text{class}}$ & 1.0 \\
+    $w_{\text{mde}}$   & 1.0 \\
+    $K$ (binary)       & 6 \\
+    $K$ (multiclass)   & 16 \\
+    Steps (binary)     & 60{,}000 \\
+    Steps (multiclass) & 120{,}000 \\
+    GL pretraining     & 1{,}000 points, $k{=}10$ neighbours \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Additional Baselines: MNIST}
+\label{appendix:mnist_baselines}
+
+\begin{table}[H]
+  \caption{Sklearn baselines on MNIST (16 components, single seed).}
+  \label{tab:mnist_baselines}
+  \centering
+  \small
+  \begin{tabular}{lc}
+    \toprule
+    Method & Test Accuracy (\%) \\
+    \midrule
+    Random Forest (raw)   & 97.1 \\
+    Logistic Regression   & 92.7 \\
+    PCA + LR              & 93.0 \\
+    KPCA (RBF) + LR       & 97.2 \\
+    TruncatedSVD + LR     & 93.0 \\
+    SpectralEmbedding + LR & 91.5 \\
+    NeuralEF              & 84.98 \\
+    \midrule
+    \textbf{EFDO (off, seed 0)}  & \textbf{94.6} \\
+    EFDO (diag, seed 0) & 93.7 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\end{document}

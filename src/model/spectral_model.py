@@ -117,12 +117,13 @@ class SpectralModel(nn.Module):
         #   A=(B,d,d),Ag=None → full matrix (Sparse):   loss = ||A∇φ||²
         #   A=None,  Ag=(B,d) → PINN pre-applied:       loss = ||Ag||²
         #                        Ag = U(x)·Λ(x)·∇φ already computed via one PINN call.
-        from src.model.metric.lambda_u_pinn import LambdaUPinn
         A, Ag_pinn = None, None
         if self.metric is None:
             pass  # identity
-        elif isinstance(self.metric, LambdaUPinn) and grad_phi_k is not None:
-            # One PINN call: Ag = A(x)·∇φ  (O(d) faster than assembling full U)
+        elif hasattr(self.metric, 'apply_to') and grad_phi_k is not None:
+            # Metrics with apply_to (LambdaUPinn, LambdaUTrotter): compute Ag = A(x)·∇φ
+            # directly in O(B·d) — avoids building the full (B, d, d) matrix which
+            # would cost O(B·d²) and is only needed for visualisation.
             Ag_pinn = self.metric.apply_to(x, grad_phi_k)  # (B, d)
         else:
             A = self.metric(x)  # (B, d) diag or (B, d, d) full

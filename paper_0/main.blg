@@ -1,0 +1,69 @@
+This is BibTeX, Version 0.99d (TeX Live 2022)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: icml2026.bst
+Database file #1: bibliobase.bib
+I was expecting a `,' or a `}'---line 98 of file bibliobase.bib
+ :       
+ :       url=[https://arxiv.org/abs/2003.04896]
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+I was expecting a `,' or a `}'---line 108 of file bibliobase.bib
+ :       
+ :       url={https://arxiv.org/abs/2002.03747}
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+I was expecting a `,' or a `}'---line 134 of file bibliobase.bib
+ :       
+ :       URL = {https://arxiv.org/abs/2102.12230},
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+I was expecting a `,' or a `}'---line 477 of file bibliobase.bib
+ : 
+ : @inproceedings{NIPS2001_801272ee,
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+Warning--empty journal in lecun-mnisthandwrittendigit-2010
+Warning--empty journal in Lyon2016
+You've used 18 entries,
+            2773 wiz_defined-function locations,
+            738 strings with 9461 characters,
+and the built_in function-call counts, 10588 in all, are:
+= -- 915
+> -- 802
+< -- 10
++ -- 268
+- -- 250
+* -- 951
+:= -- 1681
+add.period$ -- 78
+call.type$ -- 18
+change.case$ -- 133
+chr.to.int$ -- 18
+cite$ -- 38
+duplicate$ -- 409
+empty$ -- 721
+format.name$ -- 272
+if$ -- 2187
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 17
+newline$ -- 119
+num.names$ -- 78
+pop$ -- 249
+preamble$ -- 1
+purify$ -- 115
+quote$ -- 0
+skip$ -- 339
+stack$ -- 0
+substring$ -- 302
+swap$ -- 55
+text.length$ -- 5
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 198
+warning$ -- 2
+while$ -- 75
+width$ -- 0
+write$ -- 280
+(There were 4 error messages)

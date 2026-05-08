@@ -1,0 +1,12 @@
+sklearn baselines  (accuracy % mean ± std, 5 seeds)
+
+Method                            two_moon           circles             htru2
+------------------------------------------------------------------------------
+RandomForest                   99.77±0.03       98.53±0.09       98.07±0.06
+LogReg_raw                     87.80±0.00       50.40±0.00       98.14±0.00
+PCA+LogReg                     87.80±0.00       50.40±0.00       97.77±0.00
+KPCA_rbf+LogReg                88.07±0.00       49.40±0.00       97.17±0.00
+KPCA_poly+LogReg               87.60±0.00       50.93±0.00       97.36±0.00
+KPCA_cos+LogReg                85.27±0.00       49.13±0.00       98.03±0.00
+TruncSVD+LogReg                87.80±0.00       50.40±0.00       97.77±0.00
+SpectralEmb+LogReg             49.98±0.92       49.98±0.92       91.50±0.72

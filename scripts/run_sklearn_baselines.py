@@ -88,11 +88,59 @@ def _load_mnist(seed: int, task: str = 'multiclass') -> tuple[np.ndarray, np.nda
     return X_tr, y_tr, X_te, y_te
 
 
+def _load_fashion_mnist(seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    from src.dataset.torchvision_flat import TorchvisionFlatDataset
+    kw = dict(name='fashion_mnist', root='data/fashion_mnist', task='multiclass',
+              val_fraction=0.1, standardize=True)
+    tr = TorchvisionFlatDataset(split='train', **kw)
+    te = TorchvisionFlatDataset(split='test',  **kw)
+    X_tr = np.array([s['x'].numpy() for s in tr])
+    lk = 'labels' if 'labels' in tr[0] else 'label'
+    y_tr = np.array([s[lk].item() for s in tr])
+    X_te = np.array([s['x'].numpy() for s in te])
+    y_te = np.array([s[lk].item() for s in te])
+    return X_tr, y_tr, X_te, y_te
+
+
+def _load_cifar10_features(seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Load pre-extracted ResNet-18 CIFAR-10 features (512-dim).
+
+    Requires that scripts/extract_cnn_features.py has been run first.
+    """
+    from src.dataset.pretrained_features import PretrainedFeaturesDataset
+    kw = dict(root='data/cifar10_features', val_fraction=0.1, standardize=True)
+    tr = PretrainedFeaturesDataset(split='train', **kw)
+    te = PretrainedFeaturesDataset(split='test',  **kw)
+    X_tr = np.array([s['x'].numpy() for s in tr])
+    y_tr = np.array([s['label'].item() for s in tr])
+    X_te = np.array([s['x'].numpy() for s in te])
+    y_te = np.array([s['label'].item() for s in te])
+    return X_tr, y_tr, X_te, y_te
+
+
+def _load_spotify(seed: int, task: str = 'multiclass') -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Load Spotify songs dataset (requires data/spotify/genres_v2.csv)."""
+    from src.dataset.spotify import SpotifyDataset
+    kw = dict(root='data/spotify', task=task, train_fraction=0.7,
+              val_fraction=0.1, standardize=True, seed=seed)
+    tr = SpotifyDataset(split='train', **kw)
+    te = SpotifyDataset(split='test',  **kw)
+    X_tr = np.array([s['x'].numpy() for s in tr])
+    y_tr = np.array([s['label'].item() for s in tr])
+    X_te = np.array([s['x'].numpy() for s in te])
+    y_te = np.array([s['label'].item() for s in te])
+    return X_tr, y_tr, X_te, y_te
+
+
 DATASET_LOADERS: dict[str, Any] = {
-    'two_moon':       lambda seed: _load_sklearn_2d('two_moon', seed),
-    'circles':        lambda seed: _load_sklearn_2d('circles',  seed),
-    'htru2':          lambda seed: _load_htru2(seed),
-    'mnist_mc':       lambda seed: _load_mnist(seed, task='multiclass'),
+    'two_moon':          lambda seed: _load_sklearn_2d('two_moon', seed),
+    'circles':           lambda seed: _load_sklearn_2d('circles',  seed),
+    'htru2':             lambda seed: _load_htru2(seed),
+    'mnist_mc':          lambda seed: _load_mnist(seed, task='multiclass'),
+    'fashion_mnist':     lambda seed: _load_fashion_mnist(seed),
+    'cifar10_features':  lambda seed: _load_cifar10_features(seed),
+    'spotify_mc':        lambda seed: _load_spotify(seed, task='multiclass'),
+    'spotify_bin':       lambda seed: _load_spotify(seed, task='binary'),
 }
 
 # ---------------------------------------------------------------------------

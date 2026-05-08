@@ -1,0 +1,156 @@
+\begin{thebibliography}{18}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Ajmal et~al.(2018)Ajmal, Rehman, Farooq, Ain, Riaz, and
+  Hassan]{ajmal2018convolutional}
+Ajmal, H., Rehman, S., Farooq, U., Ain, Q.~U., Riaz, F., and Hassan, A.
+\newblock Convolutional neural network based image segmentation: a review.
+\newblock \emph{Pattern Recognition and Tracking XXIX}, 10649:\penalty0
+  191--203, 2018.
+
+\bibitem[Amato et~al.(2013)Amato, L{\'o}pez, Pe{\~n}a-M{\'e}ndez,
+  Va{\v{n}}hara, Hampl, and Havel]{amato2013artificial}
+Amato, F., L{\'o}pez, A., Pe{\~n}a-M{\'e}ndez, E.~M., Va{\v{n}}hara, P., Hampl,
+  A., and Havel, J.
+\newblock Artificial neural networks in medical diagnosis, 2013.
+
+\bibitem[Belkin \& Niyogi(2008)Belkin and Niyogi]{BELKIN20081289}
+Belkin, M. and Niyogi, P.
+\newblock Towards a theoretical foundation for laplacian-based manifold
+  methods.
+\newblock \emph{Journal of Computer and System Sciences}, 74\penalty0
+  (8):\penalty0 1289--1308, 2008.
+\newblock ISSN 0022-0000.
+\newblock \doi{https://doi.org/10.1016/j.jcss.2007.08.006}.
+\newblock URL
+  \url{https://www.sciencedirect.com/science/article/pii/S0022000007001274}.
+\newblock Learning Theory 2005.
+
+\bibitem[Breiman(2001)]{breiman2001random}
+Breiman, L.
+\newblock Random forests.
+\newblock \emph{Machine Learning}, 45\penalty0 (1):\penalty0 5--32, 2001.
+
+\bibitem[Calder et~al.(2020)Calder, Cook, Thorpe, and
+  Slepcev]{646eb8ee0f50464f8db1e953d2df93c3}
+Calder, J., Cook, B., Thorpe, M., and Slepcev, D.
+\newblock Poisson learning: Graph based semi-supervised learning at very low
+  label rates.
+\newblock In \emph{Proceedings of the International Conference on Machine
+  Learning}, pp.\  8588----8598, 2020.
+
+\bibitem[Chang et~al.(2023)Chang, Wang, Wang, Wu, Yang, Zhu, Chen, Yi, Wang,
+  Wang, et~al.]{chang2023survey}
+Chang, Y., Wang, X., Wang, J., Wu, Y., Yang, L., Zhu, K., Chen, H., Yi, X.,
+  Wang, C., Wang, Y., et~al.
+\newblock A survey on evaluation of large language models.
+\newblock \emph{ACM Transactions on Intelligent Systems and Technology}, 2023.
+
+\bibitem[Deng et~al.(2022)Deng, Shi, and Zhu]{pmlr-v162-deng22b}
+Deng, Z., Shi, J., and Zhu, J.
+\newblock {N}eural{EF}: Deconstructing kernels by deep neural networks.
+\newblock In Chaudhuri, K., Jegelka, S., Song, L., Szepesvari, C., Niu, G., and
+  Sabato, S. (eds.), \emph{Proceedings of the 39th International Conference on
+  Machine Learning}, volume 162 of \emph{Proceedings of Machine Learning
+  Research}, pp.\  4976--4992. PMLR, 17--23 Jul 2022.
+\newblock URL \url{https://proceedings.mlr.press/v162/deng22b.html}.
+
+\bibitem[Ford(2015)]{FORD201579}
+Ford, W.
+\newblock Chapter 5 - eigenvalues and eigenvectors.
+\newblock In Ford, W. (ed.), \emph{Numerical Linear Algebra with Applications},
+  pp.\  79--101. Academic Press, Boston, 2015.
+\newblock ISBN 978-0-12-394435-1.
+\newblock \doi{https://doi.org/10.1016/B978-0-12-394435-1.00005-3}.
+\newblock URL
+  \url{https://www.sciencedirect.com/science/article/pii/B9780123944351000053}.
+
+\bibitem[Gomez-Chova et~al.(2008)Gomez-Chova, Camps-Valls, Munoz-Mari, and
+  Calpe]{4476091}
+Gomez-Chova, L., Camps-Valls, G., Munoz-Mari, J., and Calpe, J.
+\newblock Semisupervised image classification with laplacian support vector
+  machines.
+\newblock \emph{IEEE Geoscience and Remote Sensing Letters}, 5\penalty0
+  (3):\penalty0 336--340, 2008.
+\newblock \doi{10.1109/LGRS.2008.916070}.
+
+\bibitem[Jin et~al.(2020)Jin, Mattheakis, and
+  Protopapas]{Jin2020UnsupervisedNN}
+Jin, H., Mattheakis, M., and Protopapas, P.
+\newblock Unsupervised neural networks for quantum eigenvalue problems.
+\newblock \emph{ArXiv}, abs/2010.05075, 2020.
+\newblock URL \url{https://api.semanticscholar.org/CorpusID:222290530}.
+
+\bibitem[Lagaris et~al.(1997)Lagaris, Likas, and Fotiadis]{LAGARIS19971}
+Lagaris, I., Likas, A., and Fotiadis, D.
+\newblock Artificial neural network methods in quantum mechanics.
+\newblock \emph{Computer Physics Communications}, 104\penalty0 (1):\penalty0
+  1--14, 1997.
+\newblock ISSN 0010-4655.
+\newblock \doi{https://doi.org/10.1016/S0010-4655(97)00054-4}.
+\newblock URL
+  \url{https://www.sciencedirect.com/science/article/pii/S0010465597000544}.
+
+\bibitem[LeCun \& Cortes(2010)LeCun and
+  Cortes]{lecun-mnisthandwrittendigit-2010}
+LeCun, Y. and Cortes, C.
+\newblock {MNIST} handwritten digit database.
+\newblock 2010.
+\newblock URL \url{http://yann.lecun.com/exdb/mnist/}.
+
+\bibitem[Lyon(2016)]{Lyon2016}
+Lyon, R.
+\newblock {HTRU2}.
+\newblock 3 2016.
+\newblock \doi{10.6084/m9.figshare.3080389.v1}.
+\newblock URL \url{https://figshare.com/articles/dataset/HTRU2/3080389}.
+
+\bibitem[Lyon et~al.(2016)Lyon, Stappers, Cooper, Brooke, and
+  Knowles]{10.1093/mnras/stw656}
+Lyon, R.~J., Stappers, B.~W., Cooper, S., Brooke, J.~M., and Knowles, J.~D.
+\newblock {Fifty years of pulsar candidate selection: from simple filters to a
+  new principled real-time classification approach}.
+\newblock \emph{Monthly Notices of the Royal Astronomical Society},
+  459\penalty0 (1):\penalty0 1104--1123, 04 2016.
+\newblock ISSN 0035-8711.
+\newblock \doi{10.1093/mnras/stw656}.
+\newblock URL \url{https://doi.org/10.1093/mnras/stw656}.
+
+\bibitem[Ng et~al.(2001)Ng, Jordan, and Weiss]{NIPS2001_801272ee}
+Ng, A., Jordan, M., and Weiss, Y.
+\newblock On spectral clustering: Analysis and an algorithm.
+\newblock In Dietterich, T., Becker, S., and Ghahramani, Z. (eds.),
+  \emph{Advances in Neural Information Processing Systems}, volume~14. MIT
+  Press, 2001.
+\newblock URL
+  \url{https://proceedings.neurips.cc/paper_files/paper/2001/file/801272ee79cfde7fa5960571fee36b9b-Paper.pdf}.
+
+\bibitem[Pedregosa et~al.(2011)Pedregosa, Varoquaux, Gramfort, Michel, Thirion,
+  Grisel, Blondel, Prettenhofer, Weiss, Dubourg, Vanderplas, Passos,
+  Cournapeau, Brucher, Perrot, and Duchesnay]{scikit-learn}
+Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel,
+  O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J.,
+  Passos, A., Cournapeau, D., Brucher, M., Perrot, M., and Duchesnay, E.
+\newblock Scikit-learn: Machine learning in {P}ython.
+\newblock \emph{Journal of Machine Learning Research}, 12:\penalty0 2825--2830,
+  2011.
+
+\bibitem[Shaham et~al.(2018)Shaham, Stanton, Li, Basri, Nadler, and
+  Kluger]{shaham2018spectralnet}
+Shaham, U., Stanton, K.~P., Li, H., Basri, R., Nadler, B., and Kluger, Y.
+\newblock {SpectralNet}: Spectral clustering using deep neural networks.
+\newblock In \emph{International Conference on Learning Representations}, 2018.
+\newblock URL \url{https://openreview.net/forum?id=HJ_aoCyRZ}.
+
+\bibitem[Xiao et~al.(2017)Xiao, Rasul, and Vollgraf]{xiao2017fashionmnist}
+Xiao, H., Rasul, K., and Vollgraf, R.
+\newblock Fashion-{MNIST}: a novel image dataset for benchmarking machine
+  learning algorithms.
+\newblock \emph{arXiv preprint arXiv:1708.07747}, 2017.
+\newblock URL \url{https://arxiv.org/abs/1708.07747}.
+
+\end{thebibliography}

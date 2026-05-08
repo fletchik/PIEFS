@@ -287,7 +287,7 @@ def _build_datasets(ds_cfg):
         )
         return HTRU2Dataset(split='train', **kwargs), HTRU2Dataset(split='val', **kwargs)
 
-    if name in ('mnist', 'cifar10'):
+    if name in ('mnist', 'fashion_mnist', 'cifar10'):
         from src.dataset.torchvision_flat import TorchvisionFlatDataset
 
         kwargs = dict(
@@ -301,6 +301,34 @@ def _build_datasets(ds_cfg):
         return (
             TorchvisionFlatDataset(split='train', **kwargs),
             TorchvisionFlatDataset(split='val', **kwargs),
+        )
+
+    if name == 'cifar10_features':
+        from src.dataset.pretrained_features import PretrainedFeaturesDataset
+
+        kwargs = dict(
+            root=ds_cfg.root,
+            val_fraction=ds_cfg.val_fraction,
+            standardize=ds_cfg.standardize,
+        )
+        return (
+            PretrainedFeaturesDataset(split='train', **kwargs),
+            PretrainedFeaturesDataset(split='val', **kwargs),
+        )
+
+    if name == 'spotify':
+        from src.dataset.spotify import SpotifyDataset
+
+        kwargs = dict(
+            root=ds_cfg.root,
+            task=ds_cfg.task,
+            train_fraction=ds_cfg.get('train_fraction', 0.7),
+            val_fraction=ds_cfg.val_fraction,
+            standardize=ds_cfg.standardize,
+        )
+        return (
+            SpotifyDataset(split='train', **kwargs),
+            SpotifyDataset(split='val', **kwargs),
         )
 
     raise ValueError(f"Unknown dataset name: '{name}'.")
