@@ -101,8 +101,8 @@ where $\mathbf{A}(\mathbf{x})$ is a learnable linear transformation.
 Each eigenfunction is parameterised by a neural network and trained sequentially
 under orthonormality constraints, combining a Gram-orthogonality loss, a
 Dirichlet energy term, and a supervised classification loss.
-We introduce a Givens-rotation parametrisation of the rotation factor of
-$\mathbf{A}$ that yields an exactly orthogonal matrix at every forward pass
+We introduce a Givens-rotation parametrisation of $\mathbf{A} = \bm{\Lambda}\mathbf{U}$
+that yields an exactly orthogonal $\mathbf{U}$ at every forward pass
 with no Gram–Schmidt or QR overhead.
 Dynamic loss weighting ensures a stable training curriculum: orthonormality
 is enforced first, then classification, then energy minimisation.
@@ -110,8 +110,8 @@ On standard benchmarks, EFDO substantially outperforms NeuralEF
 (fully unsupervised) across all tested datasets:
 on MNIST ($94.63\pm0.50\%$ vs.\ $84.98\%$ published, a $+9.6$ pp gain),
 on Fashion-MNIST ($87.11\pm0.55\%$ vs.\ $77.12\pm0.36\%$, a $+10.0$ pp gain),
-and on 512-dim CIFAR-10 features ($85.50\pm0.26\%$ vs.\ $76.05\pm0.55\%$,
-a $+9.5$ pp gain). NeuralEF results on Fashion-MNIST and CIFAR-10 are from
+and on 512-dim CIFAR-10 features ($85.48\pm0.55\%$ vs.\ $76.05\pm0.55\%$,
+a $+9.4$ pp gain). NeuralEF results on Fashion-MNIST and CIFAR-10 are from
 our faithful 5-seed reproduction.
 \end{abstract}
 
@@ -167,9 +167,11 @@ quotient without an explicit kernel.
 \item We introduce the Modified Dirichlet Energy (MDE) framework for
       neural eigenfunction learning with a jointly-trained data-adaptive
       metric $\mathbf{A}(\mathbf{x})$.
-\item We propose a \emph{Givens-rotation} parametrisation of the orthogonal
-      factor of $\mathbf{A}$, guaranteeing an exact rotation at every forward
-      pass with no QR or Gram–Schmidt overhead.
+\item We propose a \emph{Givens-rotation} parametrisation for the
+      $\mathbf{A} = \bm{\Lambda}\mathbf{U}$ metric that guarantees an exactly
+      orthogonal $\mathbf{U}$ at every forward pass with no QR or
+      Gram–Schmidt overhead, and gives $\mathbf{U}$ a gradient signal
+      through the rotated Dirichlet energy.
 \item We design a \emph{dynamic loss-weighting} curriculum that enforces a
       stable training hierarchy: Gram orthonormality $\to$ classification
       $\to$ energy minimisation.
@@ -306,26 +308,27 @@ The scale vector $\bm{\lambda}(\mathbf{x})$ is the output of a small
 feed-forward network.
 
 \textbf{Rotation extension (lambda\_u\_trotter).}
-$\mathbf{A}(\mathbf{x}) = \mathbf{U}(\mathbf{x})\,\bm{\Lambda}(\mathbf{x})$,
+$\mathbf{A}(\mathbf{x}) = \bm{\Lambda}(\mathbf{x})\,\mathbf{U}(\mathbf{x})$,
 where $\bm{\Lambda}$ is the diagonal scaling above and
-$\mathbf{U}(\mathbf{x}) \in SO(d)$ is an exactly orthogonal matrix.
-We parametrise $\mathbf{U}$ as a product of sparse Givens rotations,
-inspired by Trotter-style factorisations:
+$\mathbf{U}(\mathbf{x}) \in SO(d)$ is an exactly orthogonal matrix,
+so $\mathbf{A}\mathbf{v} = \bm{\Lambda}(\mathbf{U}\mathbf{v})$.
+The MDE then reads
+$\|\mathbf{A}\nabla\phi\|^2 = \sum_i \lambda_i^2\,(\mathbf{U}\nabla\phi)_i^2$,
+which depends on $\mathbf{U}$ through the rotated gradient components, giving
+the rotation network a gradient signal.
+We parametrise $\mathbf{U}$ as a product of consecutive-plane Givens rotations:
 \begin{equation}
     \label{eq:trotter}
-    \mathbf{U}(\mathbf{x}) = \prod_{(i,j)\in\mathcal{P}} G_{ij}(\theta_{ij}(\mathbf{x})),
+    \mathbf{U}(\mathbf{x}) = \prod_{i=1}^{d-1} G_{i,i+1}(\theta_i(\mathbf{x})),
 \end{equation}
-where $G_{ij}(\theta)$ is a Givens rotation in the $(i,j)$-plane and
-$\mathcal{P}$ consists of all consecutive planes $(i,i{+}1)$ for $i=1,\ldots,d{-}1$,
-traversed in two interleaved even–odd sweeps for GPU efficiency.
-Each angle $\theta_{ij}(\mathbf{x})$ is the output of a small network.
+where $G_{i,i+1}(\theta)$ is a 2-D rotation in the $(i,i{+}1)$-plane.
+Each angle $\theta_i(\mathbf{x})$ is the output of a small network with
+$\tanh$-bounded output so $\theta_i \in (-\pi, \pi)$.
+The $d{-}1$ rotations are applied in two interleaved even–odd half-sweeps,
+reducing the autograd graph from $O(d)$ to $O(1)$ Python iterations.
 Because the product of rotation matrices is a rotation matrix, $\mathbf{U}$
 is guaranteed orthogonal at every forward pass without any
 Gram–Schmidt step or QR factorisation overhead.
-Note that $\|\mathbf{U}\bm{\Lambda}\mathbf{v}\|^2 = \|\bm{\Lambda}\mathbf{v}\|^2$
-since $\mathbf{U}$ is orthogonal; the rotation therefore does not change the
-scalar MDE loss, but enriches the geometry of $\mathbf{A}$ for downstream
-applications such as physical diffusion operators.
 
 \subsection{Data Augmentation}
 \label{subsec:augmentation}
@@ -480,9 +483,9 @@ and raw Logistic Regression (98.14\%), which already perform well on this
 linearly-separable 8-dimensional dataset.
 The consistent performance across metrics and all 5 seeds (std $\leq$ 0.08\%)
 confirms that EFDO is stable on tabular data.
-Trotter parametrisation yields the highest average (97.56\%) with only
-marginally higher variance, suggesting that learning a full rotation matrix
-provides a mild benefit over diagonal scaling on this low-dimensional task.
+The Trotter variant yields the highest average (97.56\%); however, these
+results were obtained before the $\mathbf{A}=\bm{\Lambda}\mathbf{U}$ ordering
+fix and will be updated after re-runs with the corrected implementation.
 
 \subsection{MNIST: Digit Recognition}
 \label{subsec:mnist}
@@ -496,15 +499,15 @@ training—while EFDO is supervised via $\mathcal{L}_{\text{class}}$.
 Full 5-seed results for all three metric variants show:
 EFDO off: $\mathbf{94.63\pm0.50\%}$,
 EFDO diag: $93.73\pm0.26\%$ (10 seeds: 5 local + 5 Colab),
-EFDO Trotter: $94.06\pm0.39\%$ (3 of 5 seeds).
+EFDO Trotter: $94.04\pm0.22\%^\times$ (5 seeds; see footnote).
 All variants substantially exceed the $84.98\%$ reported by NeuralEF
 (a gap of $\mathbf{+9.6}$~pp for off).
 Our own reproduction of NeuralEF under identical splits yields
 $82.52\pm0.29\%$, giving a $+12.1$~pp gap.
-Notably, the Trotter variant ($94.06\%$, 3 seeds) is already comparable
-to the identity baseline, while the diagonal variant ($93.73\%$)
-is slightly below — suggesting that on pixel-space MNIST the learnable
-metric does not add over a simple identity.
+Note that Trotter results were obtained with an earlier code version in
+which the rotation $\mathbf{U}$ did not receive a gradient (equivalent to
+the diag variant); re-runs with the corrected $\mathbf{A}=\bm{\Lambda}\mathbf{U}$
+implementation are in progress and will replace these numbers.
 
 Sklearn baselines on the same split: Random Forest $97.12\pm0.03\%$,
 Logistic Regression $92.20\%$, PCA + LR $85.94\%$ (16 components).
@@ -535,13 +538,11 @@ on the resulting feature vectors.
 This tests whether EFDO can leverage high-quality visual representations
 to produce semantically meaningful eigenfunctions in a higher-dimensional
 feature space ($d{=}512$).
-Preliminary results for the identity metric (3 seeds completed) yield
-$85.40\%$, $85.80\%$, and $85.30\%$ (mean $85.5\%$), converging within
-${\approx}21$ minutes per run on CPU.
+Full 5-seed results for the identity metric yield $85.48\pm0.55\%$,
+converging within ${\approx}15$ minutes per run on CPU.
 Our NeuralEF reproduction on the same features achieves $76.05\pm0.55\%$
-(5 seeds), giving a gap of $\mathbf{+9.4}$~pp for EFDO even with only
-3 seeds completed.
-Full 5-seed results for all three EFDO metric variants are in progress.
+(5 seeds), giving a gap of $\mathbf{+9.4}$~pp.
+Results for the diag and Trotter metric variants are in progress.
 
 \subsection{Main Results Table}
 \label{subsec:main_table}
@@ -549,14 +550,19 @@ Full 5-seed results for all three EFDO metric variants are in progress.
 Table~\ref{tab:main_results} consolidates all completed and in-progress experiments.
 Two Moons, Circles, and HTRU2 are fully evaluated (5 seeds $\times$ 3 metric
 variants each).
-Fashion-MNIST off and diag results are fully evaluated (5 seeds each).
-MNIST, Fashion-MNIST Trotter, and CIFAR-10 features entries marked $*$ or $\dagger$
-are preliminary; full 5-seed grids are running.
+MNIST off, diag (10 seeds), and Trotter, Fashion-MNIST off and diag, and
+CIFAR-10 off are fully evaluated with 5 seeds.
+Entries marked $\dagger$ use 10 seeds; entries marked $^\times$ were run with
+an earlier code version and are being re-run (see caption footnote).
+Fashion-MNIST Trotter and CIFAR-10 diag/Trotter remain in progress.
 
 \begin{table*}[t]
   \caption{Validation accuracy (\%, mean~$\pm$~std over 5 seeds unless noted).
            Best EFDO variant per dataset in \textbf{bold}.
-           $*$~partial (3 of 5 seeds; full results pending).}
+           $*$~partial (3 of 5 seeds; full results pending).
+           $^\times$~obtained with an earlier implementation in which $\mathbf{U}$
+    did not receive gradients (equivalent to diag); re-run with the corrected
+    $\mathbf{A}{=}\bm{\Lambda}\mathbf{U}$ code is in progress.}
   \label{tab:main_results}
   \centering
   \small
@@ -569,13 +575,13 @@ are preliminary; full 5-seed grids are running.
     % ── EFDO variants ──────────────────────────────────────────────────────
     EFDO (off, identity)
       & $\mathbf{100.00\pm0.00}$ & $77.5\pm13.7$
-      & $97.52\pm0.07$ & $94.63\pm0.50$ & $86.73\pm0.32$ & $85.50\pm0.26^*$ \\
+      & $97.52\pm0.07$ & $94.63\pm0.50$ & $86.73\pm0.32$ & $85.48\pm0.55$ \\
     EFDO (diag, diagonal)
       & $99.97\pm0.03$           & $79.2\pm4.3$
       & $97.48\pm0.04$ & $93.73\pm0.26^\dagger$ & $\mathbf{87.11\pm0.55}$ & --- \\
-    EFDO (Trotter)
+    EFDO (Trotter)$^\times$
       & $99.91\pm0.07$           & $73.6\pm6.7$
-      & $\mathbf{97.56\pm0.08}$ & $94.06\pm0.39^*$ & --- & --- \\
+      & $\mathbf{97.56\pm0.08}$ & $94.04\pm0.22^\times$ & --- & --- \\
     \midrule
     % ── Baselines ────────────────────────────────────────────────────────
     Random Forest

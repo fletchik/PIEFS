@@ -49,7 +49,13 @@ from .diag_metric import _make_mlp
 
 
 class LambdaUTrotter(nn.Module):
-    """A(x) = U_trotter(ω(x)) · diag(λ(x)),  with bounded ω and exact orthogonality.
+    """A(x) = diag(λ(x)) · U_trotter(ω(x)),  with bounded ω and exact orthogonality.
+
+    The rotation U is applied first (U·v), then the diagonal scaling Λ scales
+    each component of the rotated vector.  This means
+        ‖A(x)·v‖² = ‖Λ(x)·U(x)·v‖² = Σ_i λ_i(x)² · [U(x)·v]_i²
+    which depends on both Λ AND U, so the ω-MLP receives gradients from the
+    MDE loss.  (Reversing the order, U·Λ·v, would give ‖Λv‖² — independent of U.)
 
     Args:
         input_dim: Dimensionality d.
@@ -160,25 +166,25 @@ class LambdaUTrotter(nn.Module):
     # ------------------------------------------------------------------
 
     def apply_to(self, x: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-        """Compute A(x) · v = U_trotter(ω(x)) · (Λ(x) · v) directly.
+        """Compute A(x) · v = Λ(x) · (U_trotter(ω(x)) · v) directly.
 
-        No norm-rescale trick.  Trotter is exactly 1-homogeneous in v, so
-        the audit §1.5 issue does not arise.
+        Order: first rotate v by U (exact orthogonal map), then scale by Λ.
+        This ensures ‖Av‖² = Σ_i λ_i² · (Uv)_i² depends on ω → ω-MLP trains.
 
         Args:
             x: (B, d)
             v: (B, d) gradient ∇φ
         Returns:
-            (B, d) = U·Λ·v
+            (B, d) = Λ·U·v
         """
-        # Λ part: det = 1 by mean-subtraction.
+        # U part: Trotter sweep(s).  Exact orthogonal map, applied first.
+        omega = self._omega(x)          # (B, P, d-1)
+        u_v = self._trotter_rotate(omega, v)  # U·v
+        # Λ part: det = 1 by mean-subtraction, applied second.
         raw = self._lam_mlp(x)
         raw = raw - raw.mean(dim=1, keepdim=True)
         lam = torch.exp(raw)            # (B, d) > 0,  Π λ_i = 1
-        w = lam * v                     # element-wise scaling
-        # U part: Trotter sweep(s).  Exact orthogonal map.
-        omega = self._omega(x)          # (B, P, d-1)
-        return self._trotter_rotate(omega, w)
+        return lam * u_v                # Λ·(U·v) = (ΛU)·v
 
     def get_lambda(self, x: torch.Tensor) -> torch.Tensor:
         """Return diag(Λ(x)) as a (B, d) vector — for diagnostics/logging."""
