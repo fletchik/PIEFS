@@ -228,13 +228,10 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-### ❌ ВАЖНАЯ: Противоречие в тексте: +9.6 pp vs +11.1 pp
+### ✅ ИСПРАВЛЕНО: Противоречие +9.6 pp vs +11.1 pp
 
-**Абстракт:** "94.6% vs. 84.98%, a **+9.6 pp** gain" — арифметически верно: 94.6 − 84.98 = 9.62.
-
-**Раздел Contributions (с. 3):** "outperforms NeuralEF on MNIST by **+11.1 pp**" — неверно.
-
-**Что делать:** заменить `+11.1` на `+9.6` в Contributions.
+**Было:** Contributions говорил "+11.1 pp" (неверно). Абстракт говорил "+9.6 pp" (верно).
+**Исправлено:** Contributions теперь "+9.6 pp (vs published) + упоминание FM/CIFAR-10 gaps".
 
 ---
 
@@ -253,13 +250,10 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-### ⚠️ СРЕДНЯЯ: "Follow the same protocol as NeuralEF" — некорректно
+### ✅ ИСПРАВЛЕНО: "Follow the same protocol as NeuralEF" — переформулировано
 
-**Статья (§3.4):** "We follow the same protocol as NeuralEF: all 70,000 examples, 10-class softmax head, K=16 eigenfunctions, 60,000 gradient steps."
-
-**Проблема:** NeuralEF — полностью **unsupervised** метод. Он не использует метки во время обучения, только при оценке (linear probe). EFDO использует метки через $\mathcal{L}_{\text{class}}$.
-
-**Что делать:** переформулировать: "We use the same data (all 70,000 examples) and head (10-class softmax, K=16) as reported by NeuralEF, but EFDO is supervised — labels are used during training via $\mathcal{L}_{\text{class}}$, while NeuralEF is fully unsupervised."
+**Было:** "We follow the same protocol as NeuralEF" — некорректно, NeuralEF unsupervised.
+**Исправлено:** §3.4 теперь говорит "We use the same data setup... Note that NeuralEF is fully unsupervised—labels are not used during training—while EFDO is supervised via L_class."
 
 ---
 
@@ -275,15 +269,11 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-### ⚠️ СРЕДНЯЯ: CIFAR-10 — устаревшие числа (2 seed → 3 seed)
+### ✅ ИСПРАВЛЕНО: CIFAR-10 — обновлено до 3 seed
 
-**Статья §3.6:** "Preliminary results for the identity metric (2 seeds completed) yield **85.4% and 85.8%**"
-
-**Реальный статус (на сейчас):** 3 seed завершены: 85.40%, 85.80%, 85.30% → mean = 85.5%
-
-**Абстракт:** "≈85.6%" — вычислено как среднее первых двух: (85.4+85.8)/2 = 85.6. Сейчас правильно: (85.4+85.8+85.3)/3 = 85.5%.
-
-**Что делать:** обновить после завершения всех 5 seed.
+**Было в статье:** "2 seeds completed: 85.4% and 85.8%, ≈85.6%"
+**Сейчас:** 3 seed завершены: 85.40%, 85.80%, 85.30% → mean = 85.5% — обновлено в тексте и таблице.
+Финальное обновление — после завершения всех 5 seed.
 
 ---
 
@@ -390,7 +380,26 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-## 6. Параметры экспериментов (актуальные)
+## 6. Результаты NeuralEF (наша репродукция, файл data/EFDO_NeuralEF/results/ALL_RESULTS.json)
+
+| Dataset | NeuralEF (5 seeds, наш прогон) | Лучший EFDO | Gap |
+|---------|-------------------------------|-------------|-----|
+| MNIST | 82.52 ± 0.29% | off: 94.63 ± 0.45% | +12.1 pp |
+| Fashion-MNIST | 77.12 ± 0.36% | diag: 87.11 ± 0.55% | +10.0 pp |
+| CIFAR-10 feat | 76.05 ± 0.55% | off: ~85.5% (3 seeds) | ~+9.4 pp |
+
+**Важно:** Опубликованный результат NeuralEF на MNIST = **84.98%** (Deng et al. 2022, Table 2). Наша репродукция даёт **82.52%** — разрыв 2.5 pp. Возможные причины: другие гиперпараметры, другой протокол обучения, другое разбиение данных в оригинале.
+
+**В статье:** для MNIST цитируем их публикацию (84.98%), для FM и CIFAR-10 используем наш прогон, с соответствующими сносками в таблице.
+
+**Per-seed результаты NeuralEF:**
+- MNIST: 82.49, 82.99, 82.55, 82.08, 82.48
+- Fashion-MNIST: 77.46, 77.28, 76.58, 76.84, 77.46
+- CIFAR-10 feat: 76.62, 75.38, 75.68, 75.77, 76.78
+
+---
+
+## 7. Параметры экспериментов (актуальные)
 
 | Параметр | Значение |
 |----------|---------|
@@ -412,4 +421,19 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-*Документ создан: 2026-05-08. Актуален для состояния кода на commit 4d0ca99.*
+---
+
+## 8. Статус сводной таблицы (актуальный)
+
+| Dataset | off | diag | trotter | NeuralEF |
+|---------|-----|------|---------|----------|
+| two_moon | ✓ 100.00±0.00 | ✓ 99.97±0.03 | ✓ 99.91±0.07 | — |
+| circles | ✓ 78.23±13.33 | ✓ 79.16±4.31 | ✓ 73.65±6.65 | — |
+| htru2 | ✓ 97.52±0.07 | ✓ 97.48±0.04 | ✓ 97.56±0.08 | — |
+| MNIST mc | ✓ 94.63±0.45 | ↻ 93.8±0.2 (4/5) | ✗ 0/5 | 82.52±0.29 ✓ |
+| Fashion-MNIST | ✓ 86.73±0.32 | ✓ 87.11±0.55 | ↻ 1/5 | 77.12±0.36 ✓ |
+| CIFAR-10 feat | ↻ 85.5 (3/5) | ✗ 0/5 | ✗ 0/5 | 76.05±0.55 ✓ |
+
+✓ = завершено, ↻ = в процессе (Mac run_priority.sh), ✗ = не запускалось
+
+*Документ обновлён: 2026-05-08. Состояние кода: commit a1f7c4d + NeuralEF данные.*

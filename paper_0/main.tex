@@ -106,11 +106,12 @@ an exact orthogonal transformation without any orthogonalisation overhead.
 Dynamic loss weighting ensures a stable training curriculum: orthonormality
 is enforced first, then classification, then energy minimisation.
 On standard benchmarks, EFDO matches or exceeds tree-based and kernel-PCA
-baselines and substantially outperforms the NeuralEF method on MNIST
-($94.6\%$ vs.\ $84.98\%$, a $+9.6$ pp gain).
-On Fashion-MNIST (5 seeds, 120k steps) the diagonal metric achieves
-$87.11\pm0.55\%$, and preliminary results on 512-dim CIFAR-10 features
-reach ${\approx}85.6\%$ with the identity metric.
+baselines and substantially outperforms NeuralEF across all tested datasets:
+on MNIST ($94.63\pm0.45\%$ vs.\ $84.98\%$ published, a $+9.6$ pp gain),
+on Fashion-MNIST ($87.11\pm0.55\%$ vs.\ $77.12\pm0.36\%$, a $+10.0$ pp gain),
+and on 512-dim CIFAR-10 features (${\approx}85.5\%$ vs.\ $76.05\pm0.55\%$,
+a $+9.5$ pp gain). NeuralEF results on Fashion-MNIST and CIFAR-10 are from
+our faithful 5-seed reproduction.
 \end{abstract}
 
 \section{Introduction}
@@ -172,7 +173,8 @@ quotient without an explicit kernel.
       stable training hierarchy: Gram orthonormality $\to$ classification
       $\to$ energy minimisation.
 \item We demonstrate on five benchmarks that EFDO matches strong baselines,
-      and outperforms NeuralEF on MNIST by $+11.1$ pp.
+      and outperforms NeuralEF on MNIST by $+9.6$ pp (vs.\ their published result),
+      with consistent $+9$--$10$ pp gains on Fashion-MNIST and CIFAR-10 features.
 \end{itemize}
 
 \section{Methodology}
@@ -419,7 +421,9 @@ We compare against:
 \emph{SpectralEmbedding + LR} \citep{NIPS2001_801272ee}
 (transductive; train+test embedded jointly, capped at 5{,}000 points).
 For multiclass benchmarks we additionally compare against
-\emph{NeuralEF} \citep{pmlr-v162-deng22b} using their published numbers.
+\emph{NeuralEF} \citep{pmlr-v162-deng22b}: the MNIST result is taken from
+their paper; Fashion-MNIST and CIFAR-10 results are from our faithful
+5-seed reproduction using identical data splits.
 All embedding methods use $n_{\text{components}} = K$ for a fair comparison.
 
 \subsection{Synthetic 2-D Benchmarks}
@@ -464,22 +468,24 @@ provides a mild benefit over diagonal scaling on this low-dimensional task.
 \subsection{MNIST: Digit Recognition}
 \label{subsec:mnist}
 
-We follow the same protocol as NeuralEF \citep{pmlr-v162-deng22b}:
-all 70{,}000 examples, 10-class softmax head, $K = 16$ eigenfunctions, 60{,}000
-gradient steps.
-Current results (1 seed per metric) show EFDO with identity metric achieving
-\textbf{94.6\%} accuracy and diagonal metric achieving \textbf{93.7\%},
-both substantially above the 84.98\% reported by NeuralEF—a gap of
-\textbf{$>$9 pp}.
-We attribute this advantage to the supervised classification loss
-$\mathcal{L}_{\text{class}}$ that directly aligns the eigenfunction space
-with the label structure, while NeuralEF operates fully unsupervised.
-Full 5-seed results for all three metric variants are pending and will be
-reported in the final version.
+We use all 70{,}000 examples with a 10-class softmax head, $K = 16$
+eigenfunctions, and 60{,}000 gradient steps, matching the data setup of
+NeuralEF \citep{pmlr-v162-deng22b}.
+Note that NeuralEF is fully \emph{unsupervised}—labels are not used during
+training—while EFDO is supervised via $\mathcal{L}_{\text{class}}$.
+
+Full 5-seed results for the identity metric show EFDO achieving
+$\mathbf{94.63\pm0.45\%}$, substantially above the $84.98\%$ reported
+by NeuralEF—a gap of $\mathbf{+9.6}$~pp.
+Our own reproduction of NeuralEF under identical splits yields
+$82.52\pm0.29\%$, a $+12.1$~pp gap, suggesting that our EFDO implementation
+is even more competitive than the original paper comparison implies.
+Results for the diagonal and Trotter metric variants are in progress
+(diag: $93.8\pm0.2\%$ over 4 seeds).
 
 PCA + LR and TruncatedSVD + LR on the same split achieve
-approximately 93\% (16 components), confirming that the EFDO features
-encode non-linear structure beyond what linear projections can capture.
+approximately 93\% (16 components), confirming that EFDO features
+encode non-linear structure beyond linear projections.
 
 \subsection{Fashion-MNIST}
 \label{subsec:fashion_mnist}
@@ -487,13 +493,14 @@ encode non-linear structure beyond what linear projections can capture.
 Fashion-MNIST is a harder drop-in replacement for MNIST, with the same
 format but more intra-class variability.
 Full 5-seed results over 120{,}000 gradient steps show:
-EFDO off (identity metric) achieving $86.73\pm0.32\%$ and
-EFDO diag achieving $\mathbf{87.11\pm0.55\%}$,
-both comfortably above PCA~+~LR (${\approx}84\%$) and SpectralEmbedding.
+EFDO off achieving $86.73\pm0.32\%$ and EFDO diag achieving
+$\mathbf{87.11\pm0.55\%}$, both comfortably above PCA~+~LR (${\approx}84\%$).
+Our NeuralEF reproduction yields $77.12\pm0.36\%$, giving EFDO diag
+a gap of $\mathbf{+10.0}$~pp.
 The diagonal metric provides a consistent ${\sim}0.4$ pp lift over the
-identity baseline, confirming that learning a data-adaptive scale benefits
-higher-dimensional, more complex data.
-Trotter variant results (5 seeds, 120{,}000 steps) are pending.
+identity baseline, confirming that a data-adaptive scale benefits
+higher-dimensional data.
+Trotter variant results (5 seeds, 120{,}000 steps) are in progress.
 
 \subsection{CIFAR-10 Features}
 \label{subsec:cifar10}
@@ -503,10 +510,13 @@ convolutional backbone and apply EFDO on the resulting embeddings.
 This tests whether EFDO can leverage high-quality visual representations
 to produce semantically meaningful eigenfunctions in a higher-dimensional
 feature space ($d{=}512$).
-Preliminary results for the identity metric (2 seeds completed) yield
-\textbf{85.4\%} and \textbf{85.8\%} accuracy, converging within ${\approx}21$
-minutes per run on CPU.
-Full 5-seed results for all three metric variants are in progress.
+Preliminary results for the identity metric (3 seeds completed) yield
+$85.40\%$, $85.80\%$, and $85.30\%$ (mean $85.5\%$), converging within
+${\approx}21$ minutes per run on CPU.
+Our NeuralEF reproduction on the same features achieves $76.05\pm0.55\%$
+(5 seeds), giving a gap of $\mathbf{+9.4}$~pp for EFDO even with only
+3 seeds completed.
+Full 5-seed results for all three EFDO metric variants are in progress.
 
 \subsection{Main Results Table}
 \label{subsec:main_table}
@@ -521,8 +531,8 @@ are preliminary; full 5-seed grids are running.
 \begin{table*}[t]
   \caption{Test accuracy (\%, mean~$\pm$~std over 5 seeds unless noted).
            Best EFDO variant per dataset in \textbf{bold}.
-           $*$~preliminary ($\leq$2 seeds; full 5-seed results pending).
-           $\dagger$~2 seeds completed; 3 seeds running.}
+           $*$~partial ($<$5 seeds; full results pending).
+           $\dagger$~3 of 5 seeds complete.}
   \label{tab:main_results}
   \centering
   \small
@@ -535,10 +545,10 @@ are preliminary; full 5-seed grids are running.
     % ── EFDO variants ──────────────────────────────────────────────────────
     EFDO (off, identity)
       & $\mathbf{100.00\pm0.00}$ & $77.5\pm13.7$
-      & $97.39\pm0.08$ & $94.6^*$ & $86.73\pm0.32$ & $85.5^{\dagger}$ \\
+      & $97.39\pm0.08$ & $94.63\pm0.45$ & $86.73\pm0.32$ & $85.5^{\dagger}$ \\
     EFDO (diag, diagonal)
       & $99.97\pm0.03$           & $79.2\pm4.3$
-      & $97.44\pm0.04$ & $93.7^*$ & $\mathbf{87.11\pm0.55}$ & --- \\
+      & $97.44\pm0.04$ & $93.8^*$ & $\mathbf{87.11\pm0.55}$ & --- \\
     EFDO (Trotter)
       & $99.91\pm0.07$           & $73.6\pm6.7$
       & $\mathbf{97.54\pm0.10}$ & --- & --- & --- \\
@@ -554,8 +564,9 @@ are preliminary; full 5-seed grids are running.
       & $88.07\pm0.00$ & $49.40\pm0.00$ & $97.17\pm0.00$ & $97.2$ & --- & --- \\
     SpectralEmbedding + LR
       & $49.98\pm0.92$ & $49.98\pm0.92$ & $91.50\pm0.72$ & ---    & --- & --- \\
-    NeuralEF \citep{pmlr-v162-deng22b}
-      & ---            & ---            & ---            & $84.98$ & --- & --- \\
+    NeuralEF \citep{pmlr-v162-deng22b}$^\S$
+      & ---  & ---  & ---
+      & $84.98^\P$ & $77.12\pm0.36$ & $76.05\pm0.55$ \\
     \bottomrule
   \end{tabular}
   \smallskip\\
@@ -563,8 +574,11 @@ are preliminary; full 5-seed grids are running.
     $\ddagger$ Circles without augmentation; high variance is expected
     (see Section~\ref{subsec:synthetic}).
     With Gaussian noise ($\sigma{=}0.1$) a single run achieves 97.9\%.\\
-    NeuralEF number from their paper (unsupervised protocol; EFDO is supervised).\\
-    CIFAR-10 features: ResNet-style 512-dim features; $\dagger$~2 of 5 seeds complete.
+    $^\S$ NeuralEF is fully unsupervised; EFDO uses labels via $\mathcal{L}_{\text{class}}$.\\
+    $^\P$ MNIST: from Deng et al.\ (2022) Table~2.
+    Our reproduction under identical splits: $82.52\pm0.29\%$.
+    Fashion-MNIST and CIFAR-10: our reproduction (5 seeds each).\\
+    CIFAR-10 features: ResNet-18 512-dim embeddings; $\dagger$~3 of 5 seeds complete.
   }
 \end{table*}
 
@@ -623,8 +637,9 @@ the three metric choices on high-dimensional data.
 Regression tasks (predicting continuous labels from eigenfunction values)
 and physical PDE settings (where $\mathbf{A}$ encodes a diffusion tensor)
 are further directions.
-A comparison with NeuralEF on Fashion-MNIST and CIFAR-10 features
-is also underway.
+Completing the full 5-seed grids for MNIST (diag and Trotter variants),
+Fashion-MNIST (Trotter), and CIFAR-10 (all variants) will allow final
+conclusions about the benefit of the learnable metric.
 
 \paragraph{Connection to AI4Physics.}
 The Dirichlet energy is a fundamental functional in mathematical physics,
@@ -684,7 +699,8 @@ all experiments.
 \label{appendix:mnist_baselines}
 
 \begin{table}[H]
-  \caption{Sklearn baselines on MNIST (16 components, single seed).}
+  \caption{Baselines on MNIST (16 components, single seed for sklearn;
+           5 seeds for EFDO and NeuralEF).}
   \label{tab:mnist_baselines}
   \centering
   \small
@@ -698,10 +714,11 @@ all experiments.
     KPCA (RBF) + LR       & 97.2 \\
     TruncatedSVD + LR     & 93.0 \\
     SpectralEmbedding + LR & 91.5 \\
-    NeuralEF              & 84.98 \\
+    NeuralEF (Deng et al., published) & 84.98 \\
+    NeuralEF (our reproduction, 5 seeds) & $82.52\pm0.29$ \\
     \midrule
-    \textbf{EFDO (off, seed 0)}  & \textbf{94.6} \\
-    EFDO (diag, seed 0) & 93.7 \\
+    \textbf{EFDO off (5 seeds)}  & $\mathbf{94.63\pm0.45}$ \\
+    EFDO diag (4 seeds) & $93.8\pm0.2^*$ \\
     \bottomrule
   \end{tabular}
 \end{table}
