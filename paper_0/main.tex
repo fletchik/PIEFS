@@ -101,8 +101,9 @@ where $\mathbf{A}(\mathbf{x})$ is a learnable linear transformation.
 Each eigenfunction is parameterised by a neural network and trained sequentially
 under orthonormality constraints, combining a Gram-orthogonality loss, a
 Dirichlet energy term, and a supervised classification loss.
-We introduce a Trotter-product parametrisation of $\mathbf{A}$ that yields
-an exact orthogonal transformation without any orthogonalisation overhead.
+We introduce a Givens-rotation parametrisation of the rotation factor of
+$\mathbf{A}$ that yields an exactly orthogonal matrix at every forward pass
+with no Gram–Schmidt or QR overhead.
 Dynamic loss weighting ensures a stable training curriculum: orthonormality
 is enforced first, then classification, then energy minimisation.
 On standard benchmarks, EFDO substantially outperforms NeuralEF
@@ -166,13 +167,13 @@ quotient without an explicit kernel.
 \item We introduce the Modified Dirichlet Energy (MDE) framework for
       neural eigenfunction learning with a jointly-trained data-adaptive
       metric $\mathbf{A}(\mathbf{x})$.
-\item We propose a \emph{Trotter-product} parametrisation of $\mathbf{A}$
-      that guarantees an exact orthogonal rotation at every forward pass with
-      no orthogonalisation overhead.
+\item We propose a \emph{Givens-rotation} parametrisation of the orthogonal
+      factor of $\mathbf{A}$, guaranteeing an exact rotation at every forward
+      pass with no QR or Gram–Schmidt overhead.
 \item We design a \emph{dynamic loss-weighting} curriculum that enforces a
       stable training hierarchy: Gram orthonormality $\to$ classification
       $\to$ energy minimisation.
-\item We demonstrate on five benchmarks that EFDO matches strong baselines,
+\item We demonstrate on six benchmarks that EFDO matches strong baselines,
       and outperforms NeuralEF on MNIST by $+9.6$ pp (vs.\ their published result),
       with consistent $+9$--$10$ pp gains on Fashion-MNIST and CIFAR-10 features.
 \end{itemize}
@@ -197,6 +198,10 @@ and only $\phi_k$ (together with the shared metric $\mathbf{A}$ and the
 classification head) is updated.
 Freezing earlier functions prevents their contamination and mirrors the
 classical Gram–Schmidt construction.
+The classification head receives the full $K$-dimensional vector
+$[\phi_1(\mathbf{x}),\ldots,\phi_k(\mathbf{x}),0,\ldots,0]^\top$ at phase
+$k$, with zero-padding for not-yet-trained components; this allows the head
+to be trained jointly from phase 1 onwards.
 
 \subsection{Modified Dirichlet Energy and Loss Function}
 \label{subseq:loss_function}
@@ -301,7 +306,7 @@ The scale vector $\bm{\lambda}(\mathbf{x})$ is the output of a small
 feed-forward network.
 
 \textbf{Rotation extension (lambda\_u\_trotter).}
-$\mathbf{A}(\mathbf{x}) = \bm{\Lambda}(\mathbf{x})\,\mathbf{U}(\mathbf{x})$,
+$\mathbf{A}(\mathbf{x}) = \mathbf{U}(\mathbf{x})\,\bm{\Lambda}(\mathbf{x})$,
 where $\bm{\Lambda}$ is the diagonal scaling above and
 $\mathbf{U}(\mathbf{x}) \in SO(d)$ is an exactly orthogonal matrix.
 We parametrise $\mathbf{U}$ as a product of sparse Givens rotations,
@@ -311,14 +316,16 @@ inspired by Trotter-style factorisations:
     \mathbf{U}(\mathbf{x}) = \prod_{(i,j)\in\mathcal{P}} G_{ij}(\theta_{ij}(\mathbf{x})),
 \end{equation}
 where $G_{ij}(\theta)$ is a Givens rotation in the $(i,j)$-plane and
-$\mathcal{P}$ is a fixed sparse set of pairs.
+$\mathcal{P}$ consists of all consecutive planes $(i,i{+}1)$ for $i=1,\ldots,d{-}1$,
+traversed in two interleaved even–odd sweeps for GPU efficiency.
 Each angle $\theta_{ij}(\mathbf{x})$ is the output of a small network.
 Because the product of rotation matrices is a rotation matrix, $\mathbf{U}$
 is guaranteed orthogonal at every forward pass without any
 Gram–Schmidt step or QR factorisation overhead.
-This is a key advantage over the matrix-exponential parametrisation
-of $\mathbf{U}$: the Givens product is numerically exact, not a first-order
-approximation.
+Note that $\|\mathbf{U}\bm{\Lambda}\mathbf{v}\|^2 = \|\bm{\Lambda}\mathbf{v}\|^2$
+since $\mathbf{U}$ is orthogonal; the rotation therefore does not change the
+scalar MDE loss, but enriches the geometry of $\mathbf{A}$ for downstream
+applications such as physical diffusion operators.
 
 \subsection{Data Augmentation}
 \label{subsec:augmentation}
@@ -350,17 +357,23 @@ isotropic Gaussian
 where $\sigma_{\text{wide}} \approx 3\,\hat{\sigma}_{\text{data}}$ is set
 automatically.  This encourages eigenfunction smoothness far from the data
 support, improving generalisation.
+\emph{Both augmentation techniques are disabled in all main experiments}
+($\sigma = 0$, $\rho = 0$); the Circles ablation (Section~\ref{subsec:ablation})
+demonstrates their effect.
 
 \subsection{Graph Laplacian Pretraining}
 \label{subsec:pretraining}
 
-To provide a warm start, we subsample $n_{\text{pre}}$ training points,
-build a $k$-nearest-neighbour graph, compute its normalised Laplacian
+As an optional warm start, one can subsample $n_{\text{pre}}$ training
+points, build a $k$-nearest-neighbour graph, compute its normalised Laplacian
 eigenvectors, and distil them into $\phi_1,\ldots,\phi_K$ via a short
 regression phase.
 The cross-entropy of a logistic regression trained on these graph-Laplacian
-features is used as $T_{\text{class}}$ in Eq.~\eqref{eq:loss_function_weight},
-providing a data-driven calibration of the classification target temperature.
+features provides a data-driven estimate for $T_{\text{class}}$ in
+Eq.~\eqref{eq:loss_function_weight}.
+\emph{In all reported experiments, this pretraining step is disabled} and
+$T_{\text{class}}$ is set to a fixed value of $0.5$; enabling it is left
+as a direction for future work.
 
 \section{Experimental Results}
 \label{sec:experimental_results}
@@ -398,9 +411,9 @@ astrophysical dataset for pulsar classification from radio-telescope observation
 \textbf{Fashion-MNIST} \citep{xiao2017fashionmnist} are standard 10-class
 handwritten-digit and clothing-image benchmarks, both consisting of
 $28\times 28$ greyscale images flattened to 784-dimensional vectors.
-\textbf{CIFAR-10 features} are 512-dimensional ResNet-style features
-extracted from CIFAR-10 \citep{Krizhevsky2009LearningML} by a pretrained
-convolutional backbone, providing a higher-dimensional real-world test for
+\textbf{CIFAR-10 features} are 512-dimensional penultimate-layer embeddings
+extracted from CIFAR-10 \citep{Krizhevsky2009LearningML} by a ResNet-18
+pretrained on ImageNet, providing a higher-dimensional real-world test for
 the learnable metric variants.
 
 \paragraph{Evaluation protocol.}
@@ -422,7 +435,7 @@ and also evaluated over 5 seeds where stochastic.
 
 \paragraph{Baselines.}
 We compare against:
-\emph{Random Forest} (200 trees, scikit-learn default depth)~\citep{breiman2001random};
+\emph{Random Forest} (500 trees, unlimited depth)~\citep{breiman2001random};
 \emph{Logistic Regression} on raw features;
 \emph{PCA + LR}, \emph{Kernel PCA} (RBF/poly/cosine) + LR,
 \emph{TruncatedSVD + LR}; and
@@ -505,7 +518,7 @@ Fashion-MNIST is a harder drop-in replacement for MNIST, with the same
 format but more intra-class variability.
 Full 5-seed results over 120{,}000 gradient steps show:
 EFDO off achieving $86.73\pm0.32\%$ and EFDO diag achieving
-$\mathbf{87.11\pm0.55\%}$, both comfortably above PCA~+~LR (${\approx}84\%$).
+$\mathbf{87.11\pm0.55\%}$, both substantially above the PCA~+~LR baseline.
 Our NeuralEF reproduction yields $77.12\pm0.36\%$, giving EFDO diag
 a gap of $\mathbf{+10.0}$~pp.
 The diagonal metric provides a consistent ${\sim}0.4$ pp lift over the
@@ -516,8 +529,9 @@ Trotter variant results (5 seeds, 120{,}000 steps) are in progress.
 \subsection{CIFAR-10 Features}
 \label{subsec:cifar10}
 
-We extract 512-dimensional features from CIFAR-10 using a pretrained
-convolutional backbone and apply EFDO on the resulting embeddings.
+We extract 512-dimensional features from CIFAR-10 using a ResNet-18
+pretrained on ImageNet (penultimate-layer embeddings) and apply EFDO
+on the resulting feature vectors.
 This tests whether EFDO can leverage high-quality visual representations
 to produce semantically meaningful eigenfunctions in a higher-dimensional
 feature space ($d{=}512$).
@@ -683,19 +697,20 @@ all experiments.
     \toprule
     Hyperparameter & Value \\
     \midrule
-    Optimiser          & Adam, $\beta_1{=}0.9$, $\beta_2{=}0.999$ \\
+    Optimiser          & Adam, $\beta_1{=}0.9$, $\beta_2{=}0.999$, wd$=0$ \\
     Learning rate      & $10^{-3}$ \\
     Batch size         & 256 \\
-    BasisNet hidden    & $[64, 64, 64]$, ReLU \\
+    BasisNet hidden    & $[64, 64, 64]$, ReLU, no output bias \\
     MetricNet hidden   & $[64, 64]$, ReLU \\
-    $w_{\text{gram}}$  & 1.0 \\
-    $w_{\text{class}}$ & 1.0 \\
-    $w_{\text{mde}}$   & 1.0 \\
+    $w_{\text{gram}}^0, w_{\text{class}}^0, w_{\text{mde}}^0$  & 1.0, 1.0, 1.0 \\
+    $T_{\text{orth}}$  & 0.1 \\
+    $T_{\text{class}}$ & 0.5 (fixed; GL pretraining disabled) \\
     $K$ (binary)       & 6 \\
     $K$ (multiclass)   & 16 \\
-    Steps (binary)     & 60{,}000 \\
-    Steps (multiclass) & 120{,}000 \\
-    GL pretraining     & 1{,}000 points, $k{=}10$ neighbours \\
+    Steps (binary / MNIST mc) & 60{,}000 \\
+    Steps (FM / CIFAR-10)     & 120{,}000 \\
+    Augmentation       & disabled ($\sigma{=}0$, $\rho{=}0$) in all main experiments \\
+    GL pretraining     & disabled; $T_{\text{class}}$ set to 0.5 \\
     \bottomrule
   \end{tabular}
 \end{table}

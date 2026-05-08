@@ -180,7 +180,7 @@ for k = 1..K:
 
 ---
 
-### ❌ КРИТИЧЕСКАЯ: Порядок A(x) = ΛU vs UΛ делает U необучаемой
+### ✅ ИСПРАВЛЕНО: Порядок A(x) = ΛU vs UΛ
 
 **Статья (§2.4):**
 $$\mathbf{A}(\mathbf{x}) = \boldsymbol{\Lambda}(\mathbf{x})\,\mathbf{U}(\mathbf{x})$$
@@ -257,7 +257,7 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-### ⚠️ СРЕДНЯЯ: Таблица гиперпараметров — шаги для мультиклассовых задач
+### ✅ ИСПРАВЛЕНО: Таблица гиперпараметров — шаги для мультиклассовых задач
 
 **Статья Appendix (Tab. hyperparams):** "Steps (multiclass): 120,000"
 
@@ -277,7 +277,7 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-### ⚠️ СРЕДНЯЯ: "ResNet-style features" — неточно
+### ✅ ИСПРАВЛЕНО: "ResNet-style features" → "ResNet-18 (ImageNet-pretrained)"
 
 **Статья:** "512-dimensional **ResNet-style** features extracted from CIFAR-10 by a pretrained convolutional backbone"
 
@@ -287,7 +287,7 @@ return lam * u_v                  # Λ·(U·v) = ΛUv
 
 ---
 
-### ⚠️ СРЕДНЯЯ: Random Forest в коде использует 500 деревьев, в статье — 200
+### ✅ ИСПРАВЛЕНО: Random Forest — статья обновлена до 500 деревьев
 
 **Статья (§3.1):** "Random Forest (200 trees, scikit-learn default depth)"
 
