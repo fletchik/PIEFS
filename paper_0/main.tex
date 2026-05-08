@@ -290,32 +290,12 @@ The classifier logits append zeros in coordinates that have not yet been activat
 
 We do not identify $(\phi_j)$ with eigenfunctions of a prescribed self-adjoint operator on $L^2(p)$; rather, they form orthogonal, Dirichlet-regularised coordinates biased by cross-entropy, analogously to learned spectral features~\citep{pmlr-v162-deng22b}.
 
-\new{The core innovation is the interplay between two learned components: (i) the BasisSet learns eigenfunctions $\phi_1, \ldots, \phi_K$ sequentially, with exactly one active at each outer iteration; (ii) the MetricNet learns $\mathbf{A}(\mathbf{x}) = \boldsymbol{\Lambda}(\mathbf{x}) \cdot \mathbf{U}_{\mathrm{Trotter}}(\boldsymbol{\omega}(\mathbf{x}))$, where $\boldsymbol{\Lambda}$ is diagonal scaling and $\mathbf{U}$ is a product of Givens rotations. These two paths interact via the Modified Dirichlet Energy loss in~\eqref{eq:dirichlet_energy}, creating bidirectional feedback: as each eigenfunction's gradient is computed, it receives an update signal from $\mathbf{A}(\mathbf{x})$, and $\mathbf{A}(\mathbf{x})$ learns how to best scale and rotate the gradients for the current active eigenfunction. This synergy is essential to the method's stability and effectiveness. Figure~\ref{fig:system_architecture} provides a high-level system schematic.}
+\new{The core innovation is the interplay between two learned components: (i) the BasisSet learns eigenfunctions $\phi_1, \ldots, \phi_K$ sequentially, with exactly one active at each outer iteration; (ii) the MetricNet learns $\mathbf{A}(\mathbf{x}) = \boldsymbol{\Lambda}(\mathbf{x}) \cdot \mathbf{U}_{\mathrm{Trotter}}(\boldsymbol{\omega}(\mathbf{x}))$, where $\boldsymbol{\Lambda}$ is diagonal scaling and $\mathbf{U}$ is a product of Givens rotations. These two paths interact via the Modified Dirichlet Energy loss in~\eqref{eq:dirichlet_energy}, creating bidirectional feedback: as each eigenfunction's gradient is computed, it receives an update signal from $\mathbf{A}(\mathbf{x})$, and $\mathbf{A}(\mathbf{x})$ learns how to best scale and rotate the gradients for the current active eigenfunction. This synergy is essential to the method's stability and effectiveness.}
 
-Algorithm~\ref{alg:efdo-seq} lists the sequential optimisation schedule, while Figure~\ref{fig:algorithm_pseudocode} presents the full training procedure in structured form.
-Figure~\ref{fig:architecture} summarises the forward and backward coupling at outer index~$k$; the narrative below matches the same notation.
+Algorithm~\ref{alg:efdo-seq} lists the sequential optimisation schedule.
 At outer index~$k$, the frozen stack $\boldsymbol{\Phi}_{1{:}k-1}$ and the trainable map $\phi_k$ jointly feed $\mathcal{L}_{\mathrm{orth}}$ and $\mathcal{L}_{\mathrm{class}}$, while $\mathcal{L}_{\mathrm{mde}}$ couples $\mathbf{A}(\mathbf{x})$ to $\nabla_{\mathbf{x}}\phi_k$ (see~\eqref{eq:dirichlet_energy}); only $\theta_k$ receives gradients.
 The losses aggregate as in~\eqref{eq:loss_function} with weights~\eqref{eq:loss_function_weight}.
 After the schedule completes, inference uses the affine readout on the leading coordinates~\eqref{eq:class_log_prob}.
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{fig_architecture.png}
-  \caption[EFDO System Architecture]{%
-    \new{Overview of the EFDO framework. Data $\mathbf{X}$ flows through two interacting pathways: (left) BasisSet sequentially activates eigenfunctions $\phi_1, \phi_2, \ldots, \phi_K$, with only one trainable at each step; (right) MetricNet learns $\mathbf{A}(\mathbf{x}) = \boldsymbol{\Lambda}(\mathbf{x}) \cdot \mathbf{U}_{\mathrm{Trotter}}(\boldsymbol{\omega}(\mathbf{x}))$. The two paths couple via the Modified Dirichlet Energy loss $\mathcal{L}_{\mathrm{mde}} = \mathbb{E}_x[\|\mathbf{A}(\mathbf{x})\nabla\phi_k(\mathbf{x})\|^2]$, creating bidirectional feedback. The ClassificationHead combines all eigenfunctions into a linear classifier. The three loss components (task, MDE, Gram-matrix constraint) are weighted dynamically as in Eq.~\eqref{eq:loss_function}.}}
-  \label{fig:system_architecture}
-\end{figure*}
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{efdo_training_phase_k.pdf}
-  \caption[EFDO at phase $k$]{%
-    At outer index~$k$, the stack $\boldsymbol{\Phi}_{1{:}k-1}$ is fixed while only $\phi_k(\cdot;\theta_k)$ is updated.
-    Solid arrows denote forward evaluation; dashed red arrows denote gradients that update $\theta_k$ only (coordinates with $j<k$ are detached).
-    The three losses combine as in~\eqref{eq:loss_function} with weights from~\eqref{eq:loss_function_weight} and stop-gradient on $(w_{\mathrm{orth}},w_{\mathrm{class}},w_{\mathrm{mde}})$.
-    After training, logits follow $\mathbf{W}\boldsymbol{\Phi}+\mathbf{b}$ on the leading coordinates~\eqref{eq:class_log_prob}.}
-  \label{fig:architecture}
-\end{figure*}
 
 \begin{algorithm}[tb]
  \caption{Sequential block-coordinate descent for EFDO.}
@@ -331,14 +311,6 @@ After the schedule completes, inference uses the affine readout on the leading c
  \ENDFOR
  \end{algorithmic}
 \end{algorithm}
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{fig_algorithm.png}
-  \caption[EFDO Training Algorithm]{%
-    \new{Detailed pseudocode for the Sequential Eigenfunction Dirichlet Optimization algorithm. The key insight is the cycling of the active eigenfunction $k \leftarrow ((t{-}1) \bmod K) + 1$: at each step, only one eigenfunction $\phi_k$ and the metric network $\mathbf{A}(\mathbf{x})$ receive gradient updates, while all others remain frozen. The three loss terms (classification, Modified Dirichlet Energy, and Gram-matrix orthogonality constraint) are computed jointly and combined with dynamic weights. This sequential activation prevents basis collapse, ensures stable convergence, and enables interpretability through individual eigenfunction monitoring.}}
-  \label{fig:algorithm_pseudocode}
-\end{figure*}
 
 \subsection{Loss-Function Weighting}
 \label{subsec:loss_function_weigting}
