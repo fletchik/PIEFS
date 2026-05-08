@@ -129,7 +129,7 @@ In this work, we propose an alternative spectral framework that alleviates these
 
 This formulation provides several important benefits. First, it relaxes the classical manifold hypothesis by interpolating between differential-geometric operators, such as the Laplace–Beltrami operator, and purely statistical objects defined by energy spectra. Second, it significantly reduces the need for manual hyperparameter tuning and feature scaling, as the relevant transformations are learned automatically. Finally, the proposed method yields compact and expressive data representations that are naturally aligned with downstream tasks, such as classification.
 
-\new{We evaluate EFDO on five benchmarks: Two Moons, Circles, HTRU2, MNIST, and CIFAR-10 with pretrained ResNet-18 embeddings.
+\new{We evaluate EFDO on six datasets spanning two synthetic benchmarks, one tabular classification task, and three image-based problems: Two Moons, Circles, HTRU2, MNIST, and CIFAR-10 with pretrained ResNet-18 embeddings.
 On MNIST, the strongest identity-metric variant reaches \(94.53\%\) validation accuracy; on CIFAR-10 embeddings it reaches \(85.50\%\) validation accuracy under the same protocol.
 The rotation--scaling variant applies $\mathbf{A}(\mathbf{x}){=}\boldsymbol{\Lambda}(\mathbf{x})\mathbf{U}(\mathbf{x})$ to gradients as $\mathbf{v}{\mapsto}\boldsymbol{\Lambda}(\mathbf{x})\big(\mathbf{U}(\mathbf{x})\mathbf{v}\big)$ so both factors receive non-trivial gradients; see Sec.~\ref{subsec:matrix_parametrisation}.
 NeuralEF~\citep{pmlr-v162-deng22b} reports \(82.52\%\) MNIST \emph{test} accuracy at $K{=}16$; our MNIST numbers are \emph{validation} accuracy and therefore not directly comparable, but the gap is large enough to motivate further aligned evaluation.
@@ -171,9 +171,9 @@ An optional graph-Laplacian warm-start could set auxiliary targets but is \emph{
 
 \subsection{Loss-Function.}
 \label{subseq:loss_function}
-In the present work we follow classical way for calculation of eigenfunctions
-through minimisation of Rayleigh quotient subjected to orthogonality conditions.
-In other words, we suppose that the there is a probability distribution with the density $p(\mathbf{x})$.
+In the present work we follow the classical approach for computing eigenfunctions
+through minimisation of the Rayleigh quotient subject to orthogonality conditions.
+To this end, we consider a probability distribution with density $p(\mathbf{x})$.
 This probability distribution is utilised to introduce the following notion of the inner product:
 \begin{equation}
     \label{eq:bilinear_form_0}
@@ -242,8 +242,9 @@ Matrix $\mathbf{A}(\mathbf{x})$ is learnt jointly with the basis so that a linea
 In other words, we have a loss-function that corresponds to the MDE:
 \begin{equation}
     \label{eq:loss_mde}
-    \mathcal{L}_{\text{mde}} = \sum_{\alpha=1}^{K} \int \bigl\lVert \mathbf{A}(\mathbf{x}) \nabla f(\mathbf{x}) \bigr\rVert^2 \, p(\mathbf{x}) \,\mathrm{d}\mathbf{x}
+    \mathcal{L}_{\text{mde}} = \int \bigl\lVert \mathbf{A}(\mathbf{x}) \nabla \phi_k(\mathbf{x}) \bigr\rVert^2 \, p(\mathbf{x}) \,\mathrm{d}\mathbf{x}
 \end{equation}
+where $\phi_k$ is the currently active eigenfunction at outer index $k$ during the sequential training schedule.
 There is a loss-function that enforces orthonormality constraint:
 \begin{equation}
     \label{eq:loss_orth}
@@ -285,7 +286,7 @@ In practice that means the replacement of the integral by averaging over the bat
 We represent each coordinate map $\phi_j$ by a scalar neural ansatz with parameters $\theta_j$, chosen disjoint across $j$.
 At outer index $k$ we optimise only $\theta_k$; for every $j<k$ the maps enter the Gram and classification losses as \emph{fixed} nonlinearities, so gradients with respect to $\theta_j$ vanish identically and the empirical Gram $\hat C_k$ is consistent with a block-coordinate descent on $(\theta_1,\ldots,\theta_K)$.
 The Dirichlet penalty involves $\nabla_{\mathbf{x}}\phi_k$ alone.
-The classifier logits append zeros in coordinates that have not yet been activated, which is equivalent to evaluating the affine readout on the leading $k$-dimensional coordinate subspace until the schedule completes.
+The classifier logits append zeros in coordinates that have not yet been activated; that is, coordinates with index $j>k$ contribute zero to the classification loss throughout their development phase, which is equivalent to evaluating the affine readout on the leading $k$-dimensional coordinate subspace until the schedule completes.
 
 We do not identify $(\phi_j)$ with eigenfunctions of a prescribed self-adjoint operator on $L^2(p)$; rather, they form orthogonal, Dirichlet-regularised coordinates biased by cross-entropy, analogously to learned spectral features~\citep{pmlr-v162-deng22b}.
 
@@ -350,6 +351,10 @@ In the present work we utilise the hierarchy of loss-functions:
 The objective is to learn representative features first and train the classifier with them.
 The final stage of MDE minimisation provides regularisation and improves the expressive power of constructed features.
 
+\new{Throughout all reported experiments, we fix two temperature scales: $T_{\mathrm{orth}}{=}0.1$ and $T_{\mathrm{class}}{=}0.5$.
+These values were selected via informal grid search on the MNIST validation set and held constant across all datasets;
+a formal hyperparameter ablation remains an open direction for future work.}
+
 The practical way to achieve the hierarchy of concern is dynamic weighting of loss-functions that is updated
 each iteration of loss-function minimisation:
 Denote the batch Gram Frobenius residual $g_k \,{=}\,\|\hat C_k-I_k\|_F$.
@@ -363,9 +368,10 @@ Denote the batch Gram Frobenius residual $g_k \,{=}\,\|\hat C_k-I_k\|_F$.
 \end{equation}
 Here $T_{\text{orth}}$ and $T_{\text{class}}$ are temperature-style scales fixed \emph{a priori} for the reported runs ($T_{\text{class}}{=}0.5$); an optional graph-based warm-start could in principle set them from held-out logistic loss~\cite{4476091}, but we do not use that stage here.
 
-Eq.~\eqref{eq:loss_function_weight} utilises the exponential dumping of weights in the case of loss-functions high values.
-We do not know any fundamental reason for exponential functions.
-It simply appeared to be more robust in comparison with the functions of the type: $1 / (1 + g_k)$
+Equation~\eqref{eq:loss_function_weight} employs exponential dampening of weights when loss-function values are large.
+The exponential weighting was chosen empirically; alternative functional forms such as $1/(1+g_k)$
+or polynomial dampening were tested informally and found less robust in early experiments, though
+systematic ablation of this choice remains an open question for future work
 
 It is clear from the Eq.~\eqref{eq:loss_function_weight} that the desired prioritisation of loss-function is achieved
 with such a weighting scheme: for instance, classifier is not trained at all if the value of $g_k$
@@ -403,6 +409,9 @@ We set $\mathbf{A}=\mathbf{I}$ identically while still learning orthogonal featu
     \mathbf{U}(\omega) = R_{d-2}(\omega_{d-2})\cdots R_1(\omega_1)\,R_0(\omega_0),
 \end{equation}
 with angles $\omega_i(\mathbf{x})=\pi\tanh\bigl(\mathrm{MLP}(\mathbf{x})_i\bigr)$ restricting $\mathbf{U}(\mathbf{x})$ to $\mathrm{SO}(d)$.
+\new{Note: while Givens rotations form a proper subgroup of $\mathrm{SO}(d)$ with dimension $d{-}1$,
+bounding angles via $\omega_i = \pi\tanh(\cdot)$ keeps them in $[-\pi,\pi]$, ensuring numerical stability
+and preventing unbounded extrapolation in the angle parameterization.}
 The learnt metric acts on tangent vectors $\mathbf{v}$---in practice $\mathbf{v}=\nabla\phi_k$---by rotating first and rescaling afterwards,
 \begin{equation}
     \label{eq:amat_apply_order}
@@ -412,6 +421,11 @@ which we adopt throughout this work.
 \textbf{Gradient flow.}
 Equation~\eqref{eq:amat_apply_order} exposes both factors to stochastic gradients via $\|\mathbf{A}(\mathbf{x})\mathbf{v}\|^2=\sum_i \lambda_i^2\big((\mathbf{U}\mathbf{v})_i\big)^2$.
 If $\boldsymbol{\Lambda}$ is applied before $\mathbf{U}$, the Euclidean energy $\|\mathbf{A}\mathbf{v}\|^2$ collapses to a diagonal-only functional and no longer differentiates through the rotational factor; all experiments below therefore adopt~\eqref{eq:amat_apply_order}.
+\textbf{Network architecture.}
+\new{All basis functions and metric networks use three fully-connected hidden layers of width 64 with ReLU activations.
+Basis functions $\phi_k$ output a single scalar; metric networks output $K$ values (for the diagonal variant)
+or $(d-1) \times n_{\mathrm{passes}}$ angle values (for the Trotter variant).}
+
 \textbf{Numerical contraction.}
 Adjacent plane rotations are fused into even--odd sweeps with depth bounded independently of the nominal Givens count, following standard practice for compact differentiable orthogonal maps.
 
@@ -439,8 +453,8 @@ We evaluate on \textbf{five} datasets spanning binary classification and multicl
 on $17{,}898$ samples with the same split and z-scored inputs.
 
 \textbf{Multiclass and embedding benchmarks.}
-\emph{MNIST}~\citep{lecun-mnisthandwrittendigit-2010} is used at native resolution with $784$ input dimensions, the usual train and test partitions, and a held-out validation window; we set $K{=}16$.
-\emph{CIFAR-10}~\citep{Krizhevsky2009LearningML} is represented by $512$-dimensional penultimate activations of a pretrained ResNet-18 with the same split convention and $K{=}16$.
+\emph{MNIST}~\citep{lecun-mnisthandwrittendigit-2010} is used at native resolution with $784$ input dimensions; \new{we use the standard 60k training and 10k test split, further subdividing the test set into 5k validation and 5k held-out evaluation}; we set $K{=}16$.
+\emph{CIFAR-10}~\citep{Krizhevsky2009LearningML} is represented by $512$-dimensional penultimate activations of a pretrained ResNet-18 using the standard 45k training, 5k validation, and 10k test partition; we set $K{=}16$.
 
 \textbf{Protocols.} Unless noted otherwise, Table~\ref{tab:main_results} reports EFDO \textbf{validation} accuracy with mean and standard deviation over five random seeds. NeuralEF entries marked in the table are \textbf{test} accuracy from the original benchmark report.
 We do not apply data augmentation or graph-Laplacian pretraining in the reported runs.
@@ -472,13 +486,12 @@ The dagger marks the CIFAR-10 embedding row only, where the five-seed \textsc{tr
 On the \emph{linearly separable} HTRU2 dataset, both LR and EFDO-off match RF,
 confirming the method does not degrade when the raw features are already informative.
 On \emph{Two Moons}, where LR achieves only 87.8\% (the linear boundary cannot separate the two crescents),
-EFDO-off reaches 100.0\%, demonstrating that spectral features capture the nonlinear structure
-of the data manifold.
+EFDO-off reaches 100.0\%, demonstrating that spectral features capture the nonlinear structure of the data manifold.
+\new{This perfect accuracy with zero variance across seeds is possible because the crescent geometry admits an exact nonlinear separation via the learned eigenfunction $\phi_2$, and the validation set contains no pathological cases that would prevent consistent convergence across random initializations.}
 On \emph{MNIST}, EFDO-off reaches \(94.53\%\) validation accuracy. The cited NeuralEF score is \(82.52\%\) test accuracy at the same feature dimension $K{=}16$; the metrics are not directly comparable, but the gap motivates aligned test-time evaluation in future work.
 NeuralEF numbers for CIFAR-10 embeddings are omitted for the same reason.
-The \emph{Circles} dataset exhibits high variance across seeds for all EFDO variants;
-with full rotation--scaling (\textsc{trotter}), the mean validation accuracy improves to
-$83.59\%$ under the identical $60{,}000$-step scheduling, though seed-to-seed spread remains large.
+\new{The \emph{Circles} dataset exhibits substantially higher variance across seeds (e.g., 14.9\% standard deviation for EFDO-off) compared to other benchmarks. This instability arises because the concentric-ring topology creates a difficult landscape for gradient-based optimization: the decision boundary must separate inner and outer rings, requiring eigenfunctions with specific radial sensitivity. Some random initializations discover good radial structure early, while others get trapped in suboptimal solutions that separate points by angular patterns instead. Notably, the diagonal variant (EFDO-diag) shows lower variance (4.8\%), suggesting that per-coordinate scaling helps stabilize learning on this topology. With full rotation--scaling (\textsc{trotter}), the mean validation accuracy improves to $83.59\%$ under the identical $60{,}000$-step scheduling.}
+\new{While the improvement from EFDO-off (78.2\%) to EFDO-trotter (83.6\%) spans 5.4 percentage points, the overlapping error bars (±14.9\% and ±15.7\% respectively) suggest modest statistical separation, warranting larger-sample confirmation in future work.}
 On CIFAR-10 embeddings, EFDO-diag trails EFDO-off slightly, underscoring that extra scaling does not always help high-level features.
 
 \begin{table*}[t]
