@@ -1,0 +1,7 @@
+dataset,method,n_seeds,accuracy_mean,accuracy_std,train_size,test_size,avg_time_seconds,avg_time_formatted
+CIFAR10,RF,3,45.31,0.28,50000,10000,6264,104.4 min
+CIFAR10,LR_raw,3,38.31,0.01,50000,10000,195223,3257 sec
+CIFAR10,PCA+LR,3,33.03,0.03,50000,10000,419,7.0 sec
+CIFAR10_binary_airplane_automobile,RF,3,88.43,0.46,10000,2000,1349,22.5 min
+CIFAR10_binary_airplane_automobile,LR_raw,3,80.50,0.00,10000,2000,1956,32.6 min
+CIFAR10_binary_airplane_automobile,PCA+LR,3,79.13,0.03,10000,2000,66,1.1 min
