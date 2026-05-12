@@ -1,6 +1,7 @@
 # PIEFS — Physics-Informed Eigenfunction Features with Learnable Scaling
 
-Sequential neural eigenfunction learning using a learnable Riemannian metric.
+Sequential neural eigenfunction learning with a learnable Riemannian metric.
+Submitted to the AI4Physics Workshop @ ICML 2026.
 
 ## Setup
 
@@ -20,41 +21,71 @@ conda activate piefs
 ## Quick start
 
 ```bash
-# Two-moon, K=6, identity metric (OFF), seed=42
+# Two-moon, K=6, identity metric (off), seed=42
 python train.py run_id=exp01
 
-# HTRU2, K=6, diagonal metric, seed=42
-python train.py run_id=exp02 dataset=htru2 'model/metric=diag'
+# Circles, K=6, diagonal metric
+python train.py run_id=exp02 dataset=circles model.metric_type=diag
 
-# MNIST binary 0-vs-1, K=16, sparse metric
-python train.py run_id=exp03 dataset=mnist_binary model.K=16 'model/metric=lambda_u_sparse'
+# HTRU2, K=6, global low-rank metric (recommended)
+python train.py run_id=exp03 dataset=htru2 model.metric_type=global_low_rank model.low_rank_r=1
+
+# MNIST binary 0-vs-1, K=16
+python train.py run_id=exp04 dataset=mnist_binary model.K=16
 
 # MNIST 10-class supervised, K=10
-python train.py run_id=exp04 dataset=mnist_multiclass model.K=10 model.task=multiclass
+python train.py run_id=exp05 dataset=mnist_multiclass model.K=10 model.task=multiclass
 
-# Custom steps and batch
-python train.py run_id=exp05 dataset=circles trainer.total_steps=10000 trainer.batch_size=512
+# Custom steps and batch size
+python train.py run_id=exp06 dataset=circles trainer.total_steps=10000 trainer.batch_size=512
 ```
 
 ## Dataset configs
 
-| Config key        | Description                         | input_dim |
-|-------------------|-------------------------------------|-----------|
-| `two_moon`        | sklearn make_moons (10k samples)    | 2         |
-| `circles`         | sklearn make_circles (10k samples)  | 2         |
-| `htru2`           | HTRU2 pulsar detection (17898)      | 8         |
-| `mnist_binary`    | MNIST 0-vs-1 (flat pixels)          | 784       |
-| `mnist_multiclass`| MNIST 10 classes (flat pixels)      | 784       |
-| `cifar10_binary`  | CIFAR-10 0-vs-1 (flat pixels)       | 3072      |
+| Config key                 | Description                                  | `input_dim` |
+|----------------------------|----------------------------------------------|-------------|
+| `two_moon` (default)       | sklearn make\_moons, 10k samples             | 2           |
+| `circles`                  | sklearn make\_circles, 10k samples           | 2           |
+| `htru2`                    | HTRU2 pulsar detection, 17 898 samples       | 8           |
+| `mnist_binary`             | MNIST 0-vs-1, flat pixels                    | 784         |
+| `mnist_multiclass`         | MNIST 10 classes, flat pixels                | 784         |
+| `cifar10_binary`           | CIFAR-10 0-vs-1, flat pixels                 | 3072        |
+| `cifar10_features_multiclass` | CIFAR-10 10 classes, pretrained features  | 512         |
+| `fashion_mnist_multiclass` | Fashion-MNIST 10 classes, flat pixels        | 784         |
 
 ## Metric variants
 
-| `model/metric=...`   | Description                                    |
-|----------------------|------------------------------------------------|
-| (default) `off`      | Identity metric A = I                          |
-| `diag`               | Diagonal A(x) = Λ(x), det=1                   |
-| `lambda_u_sparse`    | Full A(x) = U·Λ, U=expm(sparse skew ω)        |
-| `lambda_u_pinn`      | Full A(x) = U_pinn·Λ, U approx. by PINN       |
+Override with `model.metric_type=<key>` on the command line.
+
+| `metric_type`      | Description                                                            |
+|--------------------|------------------------------------------------------------------------|
+| `off` (default)    | Identity metric A = I — plain Dirichlet energy, no scaling.           |
+| `diag`             | A(x) = Λ(x) diagonal, det = 1 — axis-aligned anisotropy.             |
+| `conformal`        | A(x) = σ(x)·I — isotropic x-dependent scaling (scalar MLP).          |
+| `global_low_rank`  | A = I + U·D·Vᵀ — global rank-r perturbation. **Recommended.**        |
+| `local_low_rank`   | A(x) = I + U(x)·Λ(x)·V(x)ᵀ — x-dependent rank-r perturbation.      |
+| `fisher_diag`      | A(x) = diag(√F(x)) — diagonal Fisher Information Metric (MLP approx).|
+| `lambda_u_trotter` | A(x) = Λ(x)·U(ω(x)) — Givens rotations via Trotter product formula.  |
+
+`global_low_rank` is the recommended starting point for most datasets. Set
+`model.low_rank_r` to `num_classes − 1` (e.g. `1` for binary, `9` for MNIST-10).
+
+## Evaluate from checkpoint
+
+```bash
+# Evaluate the final checkpoint (same dataset used for training)
+python scripts/eval_from_checkpoint.py \
+    --checkpoint logs/exp01/checkpoint_final.pt \
+    --split test
+
+# Evaluate on a different dataset
+python scripts/eval_from_checkpoint.py \
+    --checkpoint logs/exp01/checkpoint_final.pt \
+    --dataset two_moon --split test
+```
+
+Reported metrics: accuracy, ROC-AUC, gram\_error\_final, gram\_error\_offdiag,
+gram\_error\_diag, eigenvalue ordering, wall time per function.
 
 ## Resume from checkpoint
 
@@ -62,27 +93,10 @@ python train.py run_id=exp05 dataset=circles trainer.total_steps=10000 trainer.b
 python train.py run_id=exp01 +resume=logs/exp01/checkpoint_30k.pt
 ```
 
-## Evaluate checkpoint on any dataset
-
-```bash
-# Evaluate the final checkpoint on the test split
-python scripts/eval_from_checkpoint.py \
-    --checkpoint logs/exp01/checkpoint_final.pt \
-    --split test
-
-# Evaluate on a different dataset than the one used for training
-python scripts/eval_from_checkpoint.py \
-    --checkpoint logs/exp01/checkpoint_final.pt \
-    --dataset two_moon --split test
-```
-
-Reports: accuracy, ROC-AUC, gram_error_final, gram_error_offdiag, gram_error_diag,
-eigenvalue ordering, wall time per function.
-
 ## Reproduce all experiments
 
 ```bash
-# Full suite (Groups 0, A–F) — takes many hours
+# Full suite (Groups 0, A–F) — takes many hours on CPU
 bash scripts/reproduce_all.sh
 
 # Specific groups only
@@ -92,55 +106,79 @@ GROUPS="0 A" bash scripts/reproduce_all.sh
 GROUPS="E" bash scripts/reproduce_all.sh
 ```
 
-## Verification scripts (run before experiments)
+## Verification scripts
+
+Run these before experiments to confirm the implementation is correct:
 
 ```bash
-# Check 1: LambdaUSparse/Pinn geometric properties
+# 1. LambdaUTrotter geometric properties (orthogonality, det)
 python scripts/verify_pinn_rotation.py
 
-# Check 2: Sequential gram_error on Two-moon (K=3, 5000 steps)
+# 2. Sequential gram_error on Two-moon (K=3, 5 000 steps)
 python scripts/verify_gram.py
 
-# Check 4: Unit circle eigenfunctions vs cos/sin
+# 3. Unit circle eigenfunctions vs cos/sin (K=4, 60 000 steps)
 python scripts/verify_circle.py
 ```
+
+## Aggregate grid results
+
+```bash
+python scripts/collect_grid_results.py --log_dir logs --out_dir results
+```
+
+Reads `logs/grid_*/metrics.jsonl`, prints a markdown + LaTeX table of
+mean ± std over seeds.
 
 ## Logs and outputs
 
 ```
 logs/
   <run_id>/
-    checkpoint_15k.pt       # step 15k
-    checkpoint_30k.pt       # step 30k
-    checkpoint_45k.pt       # step 45k
-    checkpoint_60k.pt       # step 60k
-    checkpoint_best_val.pt  # best val accuracy
-    checkpoint_final.pt     # alias to final
-  <run_id>_config.md        # written BEFORE training
-  <run_id>_results.md       # written AFTER training
+    checkpoint_15k.pt        # periodic checkpoint
+    checkpoint_30k.pt
+    checkpoint_45k.pt
+    checkpoint_60k.pt
+    checkpoint_best_val.pt   # best validation accuracy
+    checkpoint_final.pt      # alias to final step
+  <run_id>_config.md         # written before training starts
+  <run_id>_results.md        # written after training finishes
   sanity/
-    SANITY_REPORT.md        # Group 0 pass/fail summary
-  final_report.md           # aggregated results all groups
+    SANITY_REPORT.md         # Group 0 pass/fail summary
+  final_report.md            # aggregated results across all groups
 ```
+
+## Paper
+
+Source lives in `paper_0/`. The compiled PDF is not tracked (it is in
+`.gitignore`). To compile:
+
+```bash
+cd paper_0
+pdflatex main.tex
+bibtex main
+pdflatex main.tex && pdflatex main.tex
+```
+
+Or if a `Makefile` is present: `make -C paper_0`.
 
 ## Expected results
 
-| Dataset | Metric | K | Val Acc | gram_error_final | Ref |
-|---------|--------|---|---------|-----------------|-----|
-| Two-moon | OFF | 6 | ~1.000 | < 0.05 | old codebase: 1.000 |
-| Two-moon | DIAG | 6 | ~1.000 | < 0.05 | old codebase: 1.000 |
-| HTRU2 | OFF | 6 | ~0.966 (LR) | < 0.10 | paper Table 1 |
-| MNIST binary | DIAG | 6 | ~0.999 | < 0.10 | old codebase: 0.999 |
-| MNIST 10-class (unsupervised LR) | OFF | 10 | ~0.848 | — | paper Table 1 |
-| NeuralEF MNIST (CNN-GP, K=10) | — | — | 0.8498 | — | NeuralEF Table 1 |
+| Dataset            | Metric           | K  | Val Acc  | gram\_error\_final |
+|--------------------|------------------|----|----------|--------------------|
+| Two-moon           | off              | 6  | ~1.000   | < 0.05             |
+| Two-moon           | diag             | 6  | ~1.000   | < 0.05             |
+| HTRU2              | off              | 6  | ~0.966   | < 0.10             |
+| MNIST binary       | diag             | 6  | ~0.999   | < 0.10             |
+| MNIST 10-class     | off (LR probe)   | 10 | ~0.848   | —                  |
 
 ## Architecture notes
 
-Sequential training trains φ_1, then freezes it, then φ_2, ..., φ_K.
-This differs from NeuralEF which trains all K functions jointly (parallel).
+Sequential training trains φ₁ then freezes it, then φ₂, ..., φ_K.
+This differs from NeuralEF which trains all K functions jointly.
 
-Key architectural differences vs NeuralEF:
-- NeuralEF: joint/parallel training with EigenGame objective, kernel-based
-- PIEFS: sequential training with Gram + Dirichlet loss, Riemannian metric A(x)
-- NeuralEF MNIST: CNN backbone → 84.98% LR accuracy
-- PIEFS MNIST: flat MLP 784-dim → lower accuracy expected (backbone gap)
+Key differences vs NeuralEF:
+- **NeuralEF**: joint/parallel training with EigenGame objective, kernel-based.
+- **PIEFS**: sequential training with Gram + Dirichlet loss, learnable metric A(x).
+- NeuralEF MNIST uses a CNN backbone → 84.98 % LR accuracy.
+- PIEFS on flat 784-dim pixels → lower accuracy expected (backbone gap, not a bug).
