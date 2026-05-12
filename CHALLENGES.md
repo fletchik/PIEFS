@@ -182,9 +182,9 @@ FAIL: ordering_satisfied=False — энергии [0.37, 0.0, ...]
 `sklearn`. Импорт `SklearnDataset` падал при старте → Hydra выходил с кодом 1. Скрипт-обёртка
 использовал `|| true` → продолжал выполнение, не сохраняя ошибки.
 
-**Решение:** Правильное окружение — `.venv` внутри проекта EFDO:
+**Решение:** Правильное окружение — `.venv` внутри проекта:
 ```
-/Users/varvaranazarenko/materials/EFDO/.venv/bin/python3
+/path/to/PIEFS/.venv/bin/python3
 ```
 Добавили автодетект в `reproduce_all.sh`:
 ```bash
