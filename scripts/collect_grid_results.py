@@ -143,7 +143,7 @@ def latex_table(
     lines = [
         '\\begin{table}[t]',
         '\\centering',
-        '\\caption{EFDO test accuracy (\\%) — mean $\\pm$ std over 5 seeds.}',
+        '\\caption{PIEFS test accuracy (\\%) — mean $\\pm$ std over 5 seeds.}',
         '\\label{tab:main_grid}',
         f'\\begin{{tabular}}{{{col_spec}}}',
         '\\toprule',
@@ -191,7 +191,7 @@ def main() -> None:
         print(f'No grid runs found in {log_dir}/grid_*/')
         return
 
-    print('EFDO Main Grid Results (accuracy % mean ± std, 5 seeds)\n')
+    print('PIEFS Main Grid Results (accuracy % mean ± std, 5 seeds)\n')
     md = markdown_table(results, args.datasets, args.metrics)
     print(md)
 
@@ -207,7 +207,7 @@ def main() -> None:
     json_path = out_dir / 'grid_results.json'
 
     with open(md_path, 'w') as f:
-        f.write('# EFDO Main Grid Results\n\n')
+        f.write('# PIEFS Main Grid Results\n\n')
         f.write('Accuracy % (mean ± std, 5 seeds, test split)\n\n')
         f.write(md + '\n')
 

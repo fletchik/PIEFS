@@ -15,7 +15,7 @@ The method achieves competitive accuracy on benchmark datasets (Two Moons, Circl
 
 ## Key Results
 
-| Dataset | RF | LR | NeuralEF* | EFDO-off | EFDO-diag | EFDO-trotter |
+| Dataset | RF | LR | NeuralEF* | EFDO-off | PIEFS-diag | PIEFS-trotter |
 |---------|----|----|-----------|----------|-----------|--------------|
 | Two Moons | 99.77±0.04 | 87.80±0.00 | --- | **100.00±0.00** | 99.97±0.04 | 99.99±0.03 |
 | Circles | 98.53±0.11 | 50.40±0.00 | --- | 78.23±14.90 | 79.16±4.82 | **83.59±15.70** |
@@ -131,7 +131,7 @@ piefs/
 │   │   ├── metric_net.py             # Metric network A(x)
 │   │   ├── trotter.py                # Trotter fixed-point method
 │   │   ├── givens.py                 # Givens rotations
-│   │   └── efdo.py                   # Main PIEFS model
+│   │   └── piefs.py                   # Main PIEFS model
 │   ├── pretrain/                      # Graph-Laplacian pretraining
 │   │   ├── __init__.py
 │   │   ├── graphlaplacian.py         # Graph Laplacian eigenmaps
@@ -188,8 +188,8 @@ Where:
 Three variants:
 
 1. **EFDO-off**: A(x) = I (identity, no scaling)
-2. **EFDO-diag**: A(x) = Λ(x) with Λᵢᵢ(x) ∈ [0.1, 10]
-3. **EFDO-trotter**: A(x) = Λ(x)·U_Trotter(ω(x)) with Givens rotations via Trotter fixed-point
+2. **PIEFS-diag**: A(x) = Λ(x) with Λᵢᵢ(x) ∈ [0.1, 10]
+3. **PIEFS-trotter**: A(x) = Λ(x)·U_Trotter(ω(x)) with Givens rotations via Trotter fixed-point
 
 ## Hyperparameters
 
@@ -311,7 +311,7 @@ python scripts/gen_additional_figures.py --log_dir results/logs
 - Does not impact classification performance in practice
 
 ### Known Limitations
-1. EFDO learns task-dependent coordinates (not eigenmodes of fixed operator)
+1. PIEFS learns task-dependent coordinates (not eigenmodes of fixed operator)
 2. Finite-batch Gram penalties only approximate global L²-orthogonality
 3. Warm-up stage is critical but can be data-dependent
 4. CPU optimization time remains a practical drawback (future work)

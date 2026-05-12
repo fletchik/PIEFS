@@ -1,4 +1,4 @@
-name: efdo
+name: piefs
 channels:
   - pytorch
   - conda-forge

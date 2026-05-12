@@ -96,8 +96,8 @@ class ExperimentLogger:
             '',
             '## Expected output',
             f'- WandB run: {project}/{run_id}',
-            f'- Checkpoint: EFDO/logs/{run_id}/checkpoint_60k.pt',
-            f'- Results MD: EFDO/logs/{run_id}_results.md',
+            f'- Checkpoint: PIEFS/logs/{run_id}/checkpoint_60k.pt',
+            f'- Results MD: PIEFS/logs/{run_id}_results.md',
             '---',
         ]
 

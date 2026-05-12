@@ -5,7 +5,7 @@ Sequential neural eigenfunction learning using a learnable Riemannian metric.
 ## Setup
 
 ```bash
-cd /path/to/EFDO
+cd /path/to/PIEFS
 
 # Option A — virtualenv (recommended)
 python3.12 -m venv .venv
@@ -14,7 +14,7 @@ pip install -r requirements.txt
 
 # Option B — conda
 conda env create -f environment.yaml
-conda activate efdo
+conda activate piefs
 ```
 
 ## Quick start
@@ -142,6 +142,6 @@ This differs from NeuralEF which trains all K functions jointly (parallel).
 
 Key architectural differences vs NeuralEF:
 - NeuralEF: joint/parallel training with EigenGame objective, kernel-based
-- EFDO: sequential training with Gram + Dirichlet loss, Riemannian metric A(x)
+- PIEFS: sequential training with Gram + Dirichlet loss, Riemannian metric A(x)
 - NeuralEF MNIST: CNN backbone → 84.98% LR accuracy
-- EFDO MNIST: flat MLP 784-dim → lower accuracy expected (backbone gap)
+- PIEFS MNIST: flat MLP 784-dim → lower accuracy expected (backbone gap)

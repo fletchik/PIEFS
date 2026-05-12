@@ -1,7 +1,7 @@
 """Evaluate eigenfeatures via sklearn classifiers (paper Table 1 protocol).
 
 Protocol from the paper:
-  1. Load trained EFDO model (eigenfunctions φ₁...φ_K)
+  1. Load trained PIEFS model (eigenfunctions φ₁...φ_K)
   2. Compute eigenfeatures: x → [φ₁(x), ..., φ_K(x)]  for train and test
   3. Train sklearn Random Forest (RF) and Logistic Regression (LR) on eigenfeatures
   4. Compare accuracy with RF/LR trained on raw features

@@ -1,4 +1,4 @@
-"""Standalone evaluation from a saved EFDO checkpoint.
+"""Standalone evaluation from a saved PIEFS checkpoint.
 
 Usage:
     python scripts/eval_from_checkpoint.py --checkpoint logs/exp01/checkpoint_final.pt
@@ -180,7 +180,7 @@ def evaluate(model, loader, device: str) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate EFDO model from checkpoint')
+    parser = argparse.ArgumentParser(description='Evaluate PIEFS model from checkpoint')
     parser.add_argument('--checkpoint', required=True, help='Path to .pt checkpoint')
     parser.add_argument('--dataset', default=None, help='Dataset name override')
     parser.add_argument('--split', default='test', choices=['train', 'val', 'test'])

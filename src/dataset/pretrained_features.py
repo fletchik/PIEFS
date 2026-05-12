@@ -2,7 +2,7 @@
 
 Loads numpy arrays produced by scripts/extract_cnn_features.py and
 exposes them as a standard PyTorch Dataset compatible with the rest of
-the EFDO pipeline (returns dicts with 'x' and 'label' keys).
+the PIEFS pipeline (returns dicts with 'x' and 'label' keys).
 
 The train/val split is carved from the saved X_train.npy file so that
 standardisation statistics are computed on the training slice only
@@ -27,7 +27,7 @@ from torch.utils.data import Dataset
 
 
 class PretrainedFeaturesDataset(Dataset):
-    """Wraps pre-extracted CNN features for use in EFDO training."""
+    """Wraps pre-extracted CNN features for use in PIEFS training."""
 
     def __init__(
         self,

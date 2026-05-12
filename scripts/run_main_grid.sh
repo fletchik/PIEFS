@@ -69,7 +69,7 @@ for ds in $DATASETS; do
 done
 
 echo "============================================================"
-echo "EFDO Main Grid  —  $total runs total"
+echo "PIEFS Main Grid  —  $total runs total"
 echo "  datasets : $DATASETS"
 echo "  metrics  : $METRICS"
 echo "  seeds    : $SEEDS"

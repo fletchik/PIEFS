@@ -1,4 +1,4 @@
-# EFDO Main Grid Results
+# PIEFS Main Grid Results
 
 Accuracy % (mean ± std, 5 seeds, test split)
 

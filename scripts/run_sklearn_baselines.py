@@ -1,4 +1,4 @@
-"""Evaluate sklearn baselines on all EFDO benchmark datasets.
+"""Evaluate sklearn baselines on all PIEFS benchmark datasets.
 
 Baselines
 ---------
@@ -353,7 +353,7 @@ def print_table(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Run sklearn baselines for EFDO comparison.')
+    parser = argparse.ArgumentParser(description='Run sklearn baselines for PIEFS comparison.')
     parser.add_argument(
         '--datasets', nargs='+',
         default=['two_moon', 'circles', 'htru2'],
@@ -366,7 +366,7 @@ def main() -> None:
     )
     parser.add_argument(
         '--n_components', type=int, default=6,
-        help='Number of components / embedding dim (default: 6, matches EFDO K)',
+        help='Number of components / embedding dim (default: 6, matches PIEFS K)',
     )
     parser.add_argument(
         '--out_dir', default='results',
