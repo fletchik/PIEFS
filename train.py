@@ -84,6 +84,8 @@ def main(cfg: DictConfig) -> None:
         input_dim=input_dim,
         hidden_dims=list(cfg.model.metric_hidden_dims),
         pinn_hidden_dims=list(cfg.model.get('pinn_hidden_dims', [128, 128, 128])),
+        low_rank_r=int(cfg.model.get('low_rank_r', 16)),
+        low_rank_init_scale=float(cfg.model.get('low_rank_init_scale', 0.01)),
     )
     if metric is not None:
         metric = metric.to(device)
@@ -102,6 +104,11 @@ def main(cfg: DictConfig) -> None:
     # ------------------------------------------------------------------
     from src.loss.spectral_loss import SpectralDirichletLoss
 
+    # Three-phase curriculum end-steps (0 = disabled, legacy exponential only).
+    _curriculum = cfg.get('curriculum', {})
+    _p1 = int(_curriculum.get('phase1_end_step', 0))
+    _p2 = int(_curriculum.get('phase2_end_step', 0))
+
     criterion = SpectralDirichletLoss(
         w_gram=cfg.criterion.w_gram,
         w_dirichlet=cfg.criterion.w_dirichlet,
@@ -109,6 +116,8 @@ def main(cfg: DictConfig) -> None:
         dynamic_weighting=cfg.criterion.get('dynamic_weighting', False),
         t_orth=cfg.criterion.get('t_orth', 0.1),
         t_class=cfg.criterion.get('t_class', 0.5),
+        phase1_end_step=_p1,
+        phase2_end_step=_p2,
     )
 
     # ------------------------------------------------------------------

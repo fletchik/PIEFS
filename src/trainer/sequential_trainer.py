@@ -222,7 +222,7 @@ class SequentialTrainer:
             global_step = (k - 1) * self.steps_per_function + local_step
 
             try:
-                loss_dict = self._training_step(optimizer)
+                loss_dict = self._training_step(optimizer, global_step=global_step)
             except torch.cuda.OutOfMemoryError:
                 if self.skip_oom:
                     logger.warning('OOM at step %d — skipping batch.', global_step)
@@ -284,7 +284,7 @@ class SequentialTrainer:
 
         return x, y
 
-    def _training_step(self, optimizer: Optimizer) -> dict[str, float]:
+    def _training_step(self, optimizer: Optimizer, global_step: int = 0) -> dict[str, float]:
         batch = next(self.train_iter)
         x = batch['x'].to(self.device)
         y = batch['labels'].to(self.device)
@@ -302,6 +302,7 @@ class SequentialTrainer:
             Ag_pinn=out.get('Ag_pinn'),
             head_out=out['head_out'],
             k=self.model._active_k,
+            global_step=global_step,
         )
         loss_dict['loss'].backward()
         # Gradient clipping — disabled by default (max_grad_norm=None).

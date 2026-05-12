@@ -36,9 +36,23 @@ model:
   K: 6                       # number of basis functions
   hidden_dims: [64, 64, 64]  # BasisNet hidden layers
   metric_type: 'off'         # quoted: bare 'off' is parsed as bool False in YAML
+                             # options: 'off' | 'diag' | 'lambda_u_trotter' | 'global_low_rank'
   metric_hidden_dims: [64, 64]
   task: binary               # "binary" or "multiclass"
   output_bias: false         # False = new experiments; True = backward-compat with old checkpoints
+
+  # GlobalLowRankMetric parameters (used only when metric_type='global_low_rank')
+  low_rank_r: 16             # rank of perturbation; recommended = num_classes - 1
+  low_rank_init_scale: 0.01  # U, V init std; 0.0 = exact identity start
+
+# Three-phase curriculum scheduling for MDE term.
+# Phase 1 (0 → phase1_end_step):    w_mde = 0  (basis trains as EFDO-off)
+# Phase 2 (p1 → phase2_end_step):   w_mde ramps linearly from 0 to dynamic value
+# Phase 3 (p2 → total_steps):       full dynamic weighting (paper eq. 10, fixed)
+# Set both to 0 to disable (legacy behaviour — only dynamic exponential weights).
+curriculum:
+  phase1_end_step: 0         # 0 = disabled. For 60k runs: try 30000 (50%)
+  phase2_end_step: 0         # 0 = disabled. For 60k runs: try 45000 (75%)
 
 writer:
   project_name: efdo-ai4physics   # WandB project name

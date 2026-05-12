@@ -1,0 +1,615 @@
+%% ВКР ВШЭ — Факультет компьютерных наук
+%% Обучаемые спектральные признаки через модифицированную энергию Дирихле
+%% Автор: Варвара Назаренко
+%% Научный руководитель: Александр Тараканов
+
+\documentclass[14pt, a4paper, oneside]{extreport}
+
+%% ---- Кодировка и язык ----
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian, english]{babel}
+
+%% ---- Поля (ГОСТ-подобные, типичные для ВШЭ) ----
+\usepackage[left=30mm, right=15mm, top=20mm, bottom=20mm]{geometry}
+
+%% ---- Межстрочный интервал ----
+\usepackage{setspace}
+\onehalfspacing
+
+%% ---- Математика ----
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+
+%% ---- Графика ----
+\usepackage{graphicx}
+\usepackage{float}
+\graphicspath{{../paper_0/figures/}}
+
+%% ---- Таблицы ----
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{multirow}
+
+%% ---- Алгоритмы ----
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+%% ---- Ссылки и цитирование ----
+\usepackage{hyperref}
+\usepackage[capitalize]{cleveref}
+\usepackage{natbib}   % или \usepackage{biblatex} — по требованию кафедры
+
+%% ---- Листинги кода ----
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  language=Python
+}
+
+%% ---- Заголовки глав (без "Глава N") ----
+\usepackage{titlesec}
+\titleformat{\chapter}[block]{\Large\bfseries}{\thechapter.}{0.5em}{}
+\titlespacing{\chapter}{0pt}{*2}{*1}
+
+%% ---- Теоремы ----
+\theoremstyle{plain}
+\newtheorem{theorem}{Теорема}[chapter]
+\newtheorem{proposition}[theorem]{Утверждение}
+\newtheorem{lemma}[theorem]{Лемма}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Определение}
+\newtheorem{remark}[theorem]{Замечание}
+
+%% ---- Команды ----
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\sg}{\mathrm{sg}}
+
+%% ========================================================
+\begin{document}
+
+%% ---- Титульный лист ----
+\begin{titlepage}
+\begin{center}
+{\large Федеральное государственное автономное образовательное учреждение\\
+высшего образования\\
+\textbf{«Национальный исследовательский университет\\
+«Высшая школа экономики»}}
+
+\vspace{0.5cm}
+{\large Факультет компьютерных наук}\\
+{\large Образовательная программа «Прикладная математика и информатика»}
+
+\vfill
+
+{\LARGE\bfseries Обучаемые спектральные признаки через\\
+модифицированную энергию Дирихле\\[0.3cm]}
+{\large (Physics-Informed Eigenfunction Features with\\
+Learnable Scaling, PIEFS / EFDO)}
+
+\vfill
+
+\begin{flushright}
+{\large\textbf{Выпускная квалификационная работа}}\\[0.5cm]
+Студента 4 курса, группа БПМ21X\\[0.3cm]
+\textbf{Назаренко Варвары Николаевны}\\[1cm]
+Научный руководитель:\\
+к.ф.-м.н., Тараканов Александр Сергеевич\\
+Факультет компьютерных наук\\
+НИУ ВШЭ, Москва
+\end{flushright}
+
+\vfill
+{\large Москва, 2026}
+\end{center}
+\end{titlepage}
+
+%% ---- Аннотация (русский) ----
+\chapter*{Аннотация}
+\addcontentsline{toc}{chapter}{Аннотация}
+
+Спектральные методы широко применяются в машинном обучении для построения признакового описания данных и обучения представлений.
+Как правило, такие подходы основаны на определении ядра или интегрального/дифференциального оператора, собственные функции которого используются для построения признаков, согласованных с геометрией данных.
+На практике качество спектральных методов существенно зависит от выбора ядра, масштабирования признаков и связанных гиперпараметров, что требует значительной ручной настройки.
+
+В настоящей работе предлагается альтернативный спектральный подход, снижающий указанные ограничения.
+Метод основан на собственных функциях модифицированного функционала энергии Дирихле, определяемого как математическое ожидание квадрата нормы градиента функции.
+Ключевая модификация состоит во введении обучаемого линейного преобразования градиента, что позволяет адаптировать спектральную структуру непосредственно из данных.
+
+Предложенный метод (EFDO) оценивается на пяти наборах данных: Two Moons, Circles, HTRU2, MNIST и CIFAR-10 (с предобученными эмбеддингами ResNet-18).
+На задаче классификации MNIST достигается точность \(94.53\%\) (вариант без метрики), что превышает ближайший аналог NeuralEF (\(82.52\%\) при том же числе признаков).
+
+\textbf{Ключевые слова:} энергия Дирихле, обучаемые спектральные признаки, собственные функции нейронных сетей, обучение представлений, Лаплас--Бельтрами.
+
+%% ---- Abstract (English) ----
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Spectral methods are widely used in machine learning for feature engineering and representation learning.
+Typically, such approaches rely on defining a kernel or an integral/differential operator whose eigenfunctions are then used to construct data-driven features.
+In practice, the performance of spectral methods is highly sensitive to the choice of kernel, feature scaling, and associated hyperparameters.
+
+We propose an alternative spectral framework (EFDO) based on eigenfunctions of a modified Dirichlet energy functional.
+The key modification introduces a learnable linear transformation of the gradient within the Dirichlet energy, allowing the spectral structure to be adapted directly from data.
+On MNIST, our strongest variant reaches $94.53\%$ validation accuracy; on CIFAR-10 ResNet-18 embeddings, $85.50\%$.
+
+\textbf{Keywords:} Dirichlet energy, learnable spectral features, neural eigenfunction, representation learning, Laplace--Beltrami operator.
+
+%% ---- Оглавление ----
+\tableofcontents
+
+%% ======================================================
+%% ГЛАВА 1: ВВЕДЕНИЕ
+%% ======================================================
+\chapter{Введение}
+\label{ch:intro}
+
+\section{Актуальность и мотивация}
+
+Задача построения информативных признакового описания данных является одной из центральных в машинном обучении.
+Спектральные методы — в частности, методы, основанные на Лаплас--Бельтрами операторе и графовом Лапласиане, — занимают особое место: они позволяют извлекать геометрически значимые представления, учитывающие структуру многообразия, на котором сосредоточены данные~\cite{Belkin2003}.
+
+% TODO: развить мотивацию (3-4 абзаца)
+% - Ограничения классических спектральных методов (вычислительная стоимость, чувствительность к ядру)
+% - Нейронные аппроксимации оператора собственных функций
+% - Идея обучаемой метрики
+
+\section{Цель и задачи работы}
+
+\textbf{Цель:} разработать и исследовать метод обучения спектральных признаков на основе модифицированного функционала энергии Дирихле с обучаемой матрицей $\mathbf{A}(\mathbf{x})$.
+
+\textbf{Задачи:}
+\begin{enumerate}
+  \item Ввести функционал модифицированной энергии Дирихле (MDE) и обосновать его связь с классическими спектральными операторами.
+  \item Разработать алгоритм последовательной оптимизации для нахождения $K$ ортогональных собственных функций.
+  \item Исследовать различные параметризации матрицы $\mathbf{A}(\mathbf{x})$: identity, диагональную, Trotter.
+  \item Провести численные эксперименты на бинарных и многоклассовых задачах классификации.
+  \item Проанализировать ограничения и открытые вопросы метода.
+\end{enumerate}
+
+\section{Научная новизна}
+
+% TODO: сформулировать 3-4 пункта новизны
+% - Введение обучаемой MDE
+% - Последовательная схема block-coordinate descent для ANN собственных функций
+% - Динамическое взвешивание функций потерь
+
+\section{Структура работы}
+
+Работа организована следующим образом.
+Глава~\ref{ch:related} содержит обзор смежных работ.
+В главе~\ref{ch:math} формализована математическая постановка задачи.
+Глава~\ref{ch:method} описывает предложенный метод EFDO.
+Глава~\ref{ch:impl} посвящена деталям реализации.
+В главе~\ref{ch:experiments} представлены результаты экспериментов.
+Глава~\ref{ch:discussion} обсуждает ограничения и открытые вопросы.
+Глава~\ref{ch:conclusion} содержит выводы.
+
+%% ======================================================
+%% ГЛАВА 2: ОБЗОР ЛИТЕРАТУРЫ
+%% ======================================================
+\chapter{Обзор литературы}
+\label{ch:related}
+
+\section{Спектральные методы в машинном обучении}
+
+Спектральные методы обучения признаков основаны на анализе оператора, ассоциированного с данными.
+Классические подходы включают Laplacian Eigenmaps~\cite{Belkin2003}, Diffusion Maps~\cite{Coifman2006}, и Locally Linear Embedding~\cite{Roweis2000}.
+
+% TODO: 2-3 страницы по истории спектральных методов
+% Laplacian Eigenmaps, Diffusion Maps, ISOMAP, t-SNE, UMAP
+
+\section{Нейронные аппроксимации операторных задач}
+
+Neural Eigenfunctions (NeuralEF)~\cite{pmlr-v162-deng22b} предложили обучать нейронные сети, аппроксимирующие собственные функции операторов, через минимизацию квотиента Рэлея.
+% TODO: описать NeuralEF детально, SpectralNet, другие
+% SpectralNet, DeepEigenmaps, PINN-based approaches
+
+\section{Физически мотивированные методы обучения}
+
+% TODO: physics-informed ML, PDE-constrained learning
+% Связь с гармоническими функциями, вариационными принципами
+
+\section{Динамическое взвешивание функций потерь}
+
+% TODO: adaptive loss weighting literature
+% GradNorm, PCGrad, MGDA, NTK-based weighting
+
+%% ======================================================
+%% ГЛАВА 3: МАТЕМАТИЧЕСКИЕ ОСНОВЫ
+%% ======================================================
+\chapter{Математические основы}
+\label{ch:math}
+
+\section{Постановка задачи}
+
+Пусть задано вероятностное распределение с плотностью $p(\mathbf{x})$ на $\R^d$.
+Задача состоит в нахождении последовательности функций $\phi_1, \phi_2, \ldots, \phi_K : \R^d \to \R$, образующих ортонормированный базис, согласованный с геометрией данных.
+
+\section{Энергия Дирихле}
+
+\begin{definition}
+\emph{Энергия Дирихле} функции $f : \R^d \to \R$ относительно меры $p(\mathbf{x})$ определяется как:
+\begin{equation}
+  \mathcal{D}[f] = \int \norm{\nabla f(\mathbf{x})}^2 \, p(\mathbf{x}) \, d\mathbf{x}.
+\end{equation}
+\end{definition}
+
+Минимизация $\mathcal{D}[f]$ при условии нормировки $\E[f^2] = 1$ соответствует нахождению первой собственной функции оператора Лапласа--Бельтрами, взвешенного мерой $p(\mathbf{x})$:
+\begin{equation}
+  -\frac{1}{p(\mathbf{x})} \nabla \cdot (p(\mathbf{x}) \nabla f) = \lambda f.
+\end{equation}
+
+\section{Модифицированная энергия Дирихле}
+
+\begin{definition}
+\emph{Модифицированная энергия Дирихле} (MDE) с матрицей $\mathbf{A}(\mathbf{x}) \in \R^{d \times d}$:
+\begin{equation}
+  \mathcal{D}_{\mathbf{A}}[f] = \int \norm{\mathbf{A}(\mathbf{x}) \nabla f(\mathbf{x})}^2 \, p(\mathbf{x}) \, d\mathbf{x}.
+\end{equation}
+\end{definition}
+
+Минимизация $\mathcal{D}_{\mathbf{A}}[f]$ при $\E[f^2] = 1$ соответствует оператору:
+\begin{equation}
+  L_{\mathbf{A}} f = -\frac{1}{p(\mathbf{x})} \nabla \cdot \big(\mathbf{A}^T\mathbf{A}\, p(\mathbf{x}) \nabla f\big),
+\end{equation}
+где $\mathbf{M}(\mathbf{x}) = \mathbf{A}(\mathbf{x})^T \mathbf{A}(\mathbf{x})$ — обучаемая риманова метрика.
+
+\section{Квотиент Рэлея и собственные функции}
+
+Для нахождения $K$ ортогональных собственных функций используется последовательная минимизация квотиента Рэлея:
+\begin{equation}
+  \phi_k = \arg\min_{\phi \perp \{\phi_1,\ldots,\phi_{k-1}\}} \frac{\mathcal{D}_{\mathbf{A}}[\phi]}{\E[\phi^2]}.
+\end{equation}
+
+% TODO: связь с классическими теоремами минимакса (Куранта--Фишера)
+
+\section{Связь с Лапласом Бельтрами}
+
+\begin{proposition}
+При $\mathbf{A}(\mathbf{x}) = \mathbf{I}$ оператор $L_{\mathbf{I}}$ совпадает с оператором Лапласа--Бельтрами, взвешенным мерой $p(\mathbf{x})$.
+При $\mathbf{A}(\mathbf{x}) = \mathbf{M}^{1/2}(\mathbf{x})$, где $\mathbf{M}$ — риманова метрика многообразия, $L_{\mathbf{A}}$ совпадает с Лапласом--Бельтрами на $(M, g)$.
+\end{proposition}
+
+% TODO: proof sketch
+
+%% ======================================================
+%% ГЛАВА 4: МЕТОД EFDO
+%% ======================================================
+\chapter{Метод EFDO}
+\label{ch:method}
+
+% В этой главе — детальное содержание из main.tex, расширенное
+
+\section{Общая схема метода}
+
+Метод EFDO (Eigenfunction-based Dirichlet-regularized Operator) строит $K$ нейросетевых аппроксимаций $\phi_1, \ldots, \phi_K$ путём последовательной минимизации обобщённой энергии Дирихле с сопутствующим обучением линейного классификатора.
+
+% --- включить Algorithm 1 из paper_0/main.tex ---
+
+\section{Функции потерь}
+\label{sec:losses}
+
+Обучение основано на взвешенной сумме трёх компонент:
+\begin{equation}
+  \mathcal{L} = \sg(w_{\text{orth}}) \mathcal{L}_{\text{orth}}
+              + \sg(w_{\text{class}}) \mathcal{L}_{\text{class}}
+              + \sg(w_{\text{mde}}) \mathcal{L}_{\text{mde}},
+\end{equation}
+где $\sg$ — операция stop-gradient.
+
+\subsection{Потеря ортогональности}
+\begin{equation}
+  \mathcal{L}_{\text{orth}} = \norm{\hat{C}_k - I_k}_F^2,
+  \quad \hat{C}_k = \frac{1}{B}\Phi_{1:k}^T \Phi_{1:k}.
+\end{equation}
+
+\subsection{Потеря классификации}
+\begin{equation}
+  \mathcal{L}_{\text{class}} = \text{CrossEntropy}\bigl(W\phi(\mathbf{x}) + b,\, y\bigr).
+\end{equation}
+
+\subsection{Потеря MDE}
+\begin{equation}
+  \mathcal{L}_{\text{mde}} = \frac{1}{B}\sum_{i=1}^B \norm{\mathbf{A}(\mathbf{x}_i)\nabla\phi_k(\mathbf{x}_i)}^2.
+\end{equation}
+
+\section{Динамическое взвешивание}
+\label{sec:weighting}
+
+Иерархия важности компонент обеспечивается динамическими весами:
+\begin{equation}
+  w_{\text{orth}} \propto 1, \quad
+  w_{\text{class}} \propto e^{-g_k / T_{\text{orth}}}, \quad
+  w_{\text{mde}} \propto e^{-\max(g_k/T_{\text{orth}},\; \mathcal{L}_{\text{class}}/T_{\text{class}})},
+\end{equation}
+где $g_k = \norm{\hat{C}_k - I_k}_F$ — норма Грама-отклонения.
+
+\section{Параметризации матрицы \texorpdfstring{$\mathbf{A}(\mathbf{x})$}{A(x)}}
+\label{sec:metric}
+
+\subsection{Тождественная матрица (EFDO-off)}
+$\mathbf{A}(\mathbf{x}) = \mathbf{I}$ — базовый вариант без обучаемой метрики.
+
+\subsection{Диагональная метрика (EFDO-diag)}
+$\mathbf{A}(\mathbf{x}) = \boldsymbol{\Lambda}(\mathbf{x}) = \text{diag}(\lambda_1(\mathbf{x}), \ldots, \lambda_d(\mathbf{x}))$, где:
+\begin{equation}
+  \lambda_i(\mathbf{x}) = \exp\bigl(z_i(\mathbf{x}) - \bar{z}(\mathbf{x})\bigr), \quad \det\boldsymbol{\Lambda} = 1.
+\end{equation}
+
+\subsection{Trotter-параметризация (EFDO-trotter)}
+\begin{equation}
+  \mathbf{A}(\mathbf{x}) = \boldsymbol{\Lambda}(\mathbf{x})\,\mathbf{U}_{\text{Trotter}}(\boldsymbol{\omega}(\mathbf{x})),
+\end{equation}
+где $\mathbf{U} = R_{d-2}(\omega_{d-2})\cdots R_0(\omega_0)$ — произведение Givens-вращений.
+
+% TODO: добавить Remark о почему Λ·U (а не U·Λ) — важно для градиента
+
+\section{Последовательный алгоритм обучения}
+
+% Вставить Algorithm 1 из main.tex
+
+%% ======================================================
+%% ГЛАВА 5: РЕАЛИЗАЦИЯ
+%% ======================================================
+\chapter{Реализация}
+\label{ch:impl}
+
+\section{Архитектура программного комплекса}
+
+% TODO: схема модулей (на основе PIPELINE.md)
+% src/model/basis/ — BasisSet, BasisFunction, BasisNet
+% src/model/metric/ — MetricNet, DiagMetric, LambdaUTrotter
+% src/trainer/ — SequentialTrainer
+% src/loss/ — SpectralDirichletLoss
+
+\section{Ключевые технические решения}
+
+\subsection{Вычисление градиента через autograd}
+
+Потеря MDE требует $\nabla_\mathbf{x} \phi_k(\mathbf{x})$.
+В отличие от обратного распространения ошибки по параметрам, здесь необходим градиент по входу:
+
+\begin{lstlisting}[language=Python]
+x_ = x.detach().requires_grad_(True)
+phi = self.net(x_)
+grad = torch.autograd.grad(
+    phi.sum(), x_, create_graph=True
+)[0]
+\end{lstlisting}
+
+\textbf{Критическое замечание:} применение декоратора \texttt{@torch.no\_grad()} к вызывающей функции делает невозможным вызов \texttt{autograd.grad} — \texttt{phi} лишается графа вычислений.
+
+% TODO: добавить остальные пункты из CHALLENGES.md
+
+\section{Трудности реализации}
+
+% Эта секция целиком берётся из CHALLENGES.md
+% Достаточно скопировать и добавить latex-форматирование
+
+% Включить: §1 no_grad, §2 numpy/requires_grad, §3 YAML off=False, §4 ||A∇φ||² vs ∇φᵀA∇φ
+
+%% ======================================================
+%% ГЛАВА 6: ЭКСПЕРИМЕНТАЛЬНЫЕ РЕЗУЛЬТАТЫ
+%% ======================================================
+\chapter{Экспериментальные результаты}
+\label{ch:experiments}
+
+\section{Датасеты и протокол оценки}
+
+% Взять из paper_0/main.tex §3.1, расширить:
+% - детали предобработки
+% - размеры train/val/test
+% - аугментации (или их отсутствие)
+
+\section{Базовые методы}
+
+% Взять из paper_0/main.tex §3.2, расширить:
+% - детали RF (n_estimators=200, max_features=sqrt, ...)
+% - LR (C=1.0, solver=lbfgs, ...)
+% - NeuralEF (arxiv config)
+
+\section{Основные результаты}
+
+% Взять Table 1 из main.tex
+% Добавить: интерпретацию каждой строки, статистику
+
+\begin{table}[h]
+  \centering
+  \caption{Точность на валидационной выборке (\%), среднее $\pm$ стд. по пяти инициализациям.}
+  \label{tab:main}
+  \small
+  \begin{tabular}{lcccccc}
+    \toprule
+    \textbf{Датасет} & \textbf{RF} & \textbf{LR} & \textbf{NeuralEF} & \textbf{EFDO-off} & \textbf{EFDO-diag} & \textbf{EFDO-trotter} \\
+    \midrule
+    Two Moons  & $99.77{\pm}0.04$ & $87.80{\pm}0.00$ & --- & $\mathbf{100.00}{\pm}0.00$ & $99.97{\pm}0.04$ & $99.99{\pm}0.03$ \\
+    Circles    & $98.53{\pm}0.11$ & $50.40{\pm}0.00$ & --- & $78.23{\pm}14.90$ & $79.16{\pm}4.82$ & $\mathbf{83.59}{\pm}15.70$ \\
+    HTRU2      & $98.07{\pm}0.07$ & $98.14{\pm}0.00$ & --- & $97.52{\pm}0.08$ & $97.48{\pm}0.04$ & $\mathbf{97.71}{\pm}0.06$ \\
+    \midrule
+    MNIST      & $97.12{\pm}0.03$ & $91.84{\pm}0.00$ & $82.52{\pm}0.29$ & $\mathbf{94.53}{\pm}0.33$ & $93.63{\pm}0.34$ & $93.99{\pm}0.25$ \\
+    CIFAR-10   & --- & --- & --- & $\mathbf{85.50}{\pm}0.53$ & $84.98{\pm}0.33$ & $\dagger$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Анализ собственных функций}
+
+% Вставить fig_eigenfunctions, fig_eigenfunctions_geom
+% Обсуждение геометрического смысла
+
+\section{Динамика обучения}
+
+% Вставить fig_training_curves, fig_gram_convergence
+
+\section{Исследование спектральной ёмкости (K-ablation)}
+
+% Вставить fig_k_ablation
+% Обсуждение diminishing returns
+
+\section{Анализ матрицы Грама}
+
+% Вставить fig_gram_matrix
+% ||C - I||_F = 0.370 — обсудить
+
+%% ======================================================
+%% ГЛАВА 7: ОБСУЖДЕНИЕ И ОГРАНИЧЕНИЯ
+%% ======================================================
+\chapter{Обсуждение и ограничения}
+\label{ch:discussion}
+
+\section{Почему EFDO-off лучше EFDO-diag/trotter?}
+
+Парадоксальный результат — тождественная матрица $\mathbf{A} = \mathbf{I}$ превосходит обучаемые варианты — объясняется несколькими факторами:
+
+\begin{enumerate}
+  \item \textbf{Ограниченная параметризация.} Trotter-параметризация покрывает лишь $(d{-}1)$-параметрическую подгруппу $\mathrm{SO}(d)$, что составляет малую долю от полной группы (для $d=784$: 783 против 306\,936 параметров).
+  \item \textbf{Конкуренция за ёмкость сети.} $\lambda$-MLP и $\omega$-MLP делят вычислительный бюджет с сетями базисных функций.
+  \item \textbf{Подавление MDE градиентов.} Динамические веса подавляют $w_{\text{mde}}$ на ранних стадиях, когда классификатор ещё не обучен.
+\end{enumerate}
+
+\section{Высокая дисперсия на Circles}
+
+% Обсуждение топологической сложности
+
+\section{Вычислительная стоимость}
+
+% Время обучения: CPU vs GPU, оценки
+
+\section{Открытые вопросы}
+
+% Включить FUTURE_WORK.md
+
+%% ======================================================
+%% ГЛАВА 8: ЗАКЛЮЧЕНИЕ
+%% ======================================================
+\chapter{Заключение}
+\label{ch:conclusion}
+
+В работе предложен и исследован метод EFDO — обучаемые спектральные признаки на основе модифицированного функционала энергии Дирихле.
+
+\textbf{Основные результаты:}
+\begin{enumerate}
+  \item Введён функционал MDE с обучаемой матрицей $\mathbf{A}(\mathbf{x})$, обобщающий классический оператор Лапласа--Бельтрами.
+  \item Предложена схема последовательного block-coordinate descent с динамическим взвешиванием потерь.
+  \item На датасете MNIST достигнута точность $94.53\%$ при $K=16$ признаках — значительно выше, чем у NeuralEF ($82.52\%$).
+  \item Показано, что обучаемая метрика $\mathbf{A}(\mathbf{x})$ не даёт устойчивого улучшения по сравнению с $\mathbf{A}=\mathbf{I}$: выявлены фундаментальные ограничения текущей параметризации и намечены пути их преодоления.
+\end{enumerate}
+
+\textbf{Практическая значимость:} после завершения обучения EFDO выполняет один прямой проход для получения $K$ признаков, что делает метод пригодным для задач с большим числом тестовых примеров.
+
+\textbf{Направления дальнейших исследований:}
+\begin{itemize}
+  \item Parametrization $\mathbf{A}(\mathbf{x})$ через информационную матрицу Фишера.
+  \item Low-rank возмущение тождественной матрицы для гарантированного $\mathbf{A} \geq \mathbf{I}$.
+  \item Расширение на графовые и текстовые данные.
+\end{itemize}
+
+%% ======================================================
+%% СПИСОК ЛИТЕРАТУРЫ
+%% ======================================================
+\bibliographystyle{plainnat}
+\bibliography{../paper_0/bibliobase}
+
+%% ======================================================
+%% ПРИЛОЖЕНИЯ
+%% ======================================================
+\appendix
+
+\chapter{Детали экспериментов}
+\label{app:experiments}
+
+\section{Гиперпараметры}
+
+\begin{table}[h]
+  \centering
+  \caption{Гиперпараметры для всех датасетов.}
+  \begin{tabular}{lcc}
+    \toprule
+    Параметр & Значение & Датасет \\
+    \midrule
+    $K$ (число собственных функций) & 16 & MNIST, CIFAR-10 \\
+    $K$ & 2 & Two Moons, Circles \\
+    $K$ & 6 & HTRU2 \\
+    Hidden dims (basis MLP) & [64, 64, 64] & все \\
+    Hidden dims (metric MLP) & [64, 64] & все \\
+    Optimizer & Adam & все \\
+    Learning rate & $10^{-3}$ & все \\
+    Batch size & 512 & MNIST, CIFAR-10 \\
+    Gradient steps & 60\,000 & All except CIFAR-trotter \\
+    Gradient steps & 120\,000 & CIFAR-trotter \\
+    $T_{\text{orth}}$ & 0.1 & все \\
+    $T_{\text{class}}$ & 0.5 & все \\
+    Seeds & 5 & все \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\chapter{Трудности реализации}
+\label{app:challenges}
+
+% Скопировать весь CHALLENGES.md, добавив LaTeX-форматирование
+% Это уникальный материал — показывает глубину работы
+
+\section{Конфликт \texttt{torch.no\_grad()} и \texttt{autograd.grad}}
+% CHALLENGES.md §1
+
+\section{Ошибка типа при вызове \texttt{.numpy()} на тензоре с градиентом}
+% CHALLENGES.md §2
+
+\section{YAML-парсинг: \texttt{off} как булево значение \texttt{False}}
+% CHALLENGES.md §3
+
+\section{Неверная формула потери Дирихле: $\nabla\phi^\top A \nabla\phi$ vs $\|A\nabla\phi\|^2$}
+% CHALLENGES.md §4
+
+\chapter{Архитектура кода}
+\label{app:code}
+
+Исходный код доступен в репозитории:\\ \url{https://github.com/[anonymized]/efdo}
+
+\section{Структура проекта}
+
+\begin{lstlisting}
+efdo/
+  train.py                 # точка входа (Hydra)
+  src/
+    configs/               # YAML конфиги датасетов и моделей
+    dataset/               # загрузчики данных
+    model/
+      basis/               # BasisSet, BasisFunction, BasisNet
+      metric/              # DiagMetric, LambdaUTrotter, MetricNet
+      spectral_model.py    # SpectralModel
+    loss/                  # SpectralDirichletLoss
+    trainer/               # SequentialTrainer
+    logger/                # логирование, визуализация
+\end{lstlisting}
+
+\section{Воспроизведение результатов}
+
+\begin{lstlisting}[language=bash]
+# Установка зависимостей
+pip install -r requirements.txt
+
+# Two Moons (быстрый тест)
+python train.py dataset=two_moon model.metric_type='off'
+
+# MNIST multiclass
+python train.py dataset=mnist_multiclass \
+  model.K=16 model.metric_type='off' \
+  trainer.total_steps=60000
+
+# CIFAR-10 (предобученные признаки)
+python train.py dataset=cifar10_features_multiclass \
+  model.K=16 model.metric_type='off'
+\end{lstlisting}
+
+\end{document}

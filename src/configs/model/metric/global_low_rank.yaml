@@ -1,0 +1,17 @@
+# GlobalLowRankMetric: A = I + U·D·V^T
+# Global (not x-dependent) low-rank perturbation of identity.
+# No MLP bottleneck — gradient flows directly to U, V, D parameters.
+#
+# Key parameters:
+#   low_rank_r:         rank of perturbation. Recommended = num_classes - 1.
+#                       MNIST (10 classes) → 9; binary → 1; CIFAR-10 → 9.
+#   low_rank_init_scale: std for U, V init. 0.0 = exact identity; 0.01 default.
+#
+# Three-phase curriculum (recommended with this metric):
+#   phase1_end_step:  step when metric ramp begins  (e.g. 30000 = 50% of 60k)
+#   phase2_end_step:  step when full weighting starts (e.g. 45000 = 75% of 60k)
+#   Set both to 0 to disable (legacy dynamic weighting only).
+
+metric_type: global_low_rank
+low_rank_r: 16                 # safe default; tune to num_classes-1 per dataset
+low_rank_init_scale: 0.01      # near-identity init, nonzero grad from step 1

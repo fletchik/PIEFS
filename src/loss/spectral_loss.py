@@ -16,9 +16,15 @@ class SpectralDirichletLoss(nn.Module):
 
     Dynamic mode (dynamic_weighting=True, paper eq. 9-10):
         w_gram_eff   = w_gram   (always active)
-        w_task_eff   = w_task  * exp(-gram_error / t_orth)
-        w_mde_eff    = w_dirichlet * exp(-max(gram_error/t_orth, L_task/t_class))
+        w_task_eff   = w_task  * exp(-gram_error² / t_orth)
+        w_mde_eff    = w_dirichlet * exp(-max(gram_error²/t_orth, L_task/t_class))
         total = w_gram_eff*L_gram + w_task_eff*L_task + w_mde_eff*L_dir
+
+        Note: ratio_gram uses gram_error**2 (= L_gram = ||C-I||_F²), matching
+        the original paper eq. 10 where w_class ∝ exp(-L_orth/T_orth) and
+        L_orth = ||C-I||_F² (squared Frobenius norm). Using gram_error (not
+        squared) suppresses the classifier ~10-12× more aggressively than
+        intended, preventing the MDE term from ever activating.
 
         Weights are computed stop-gradient (paper eq. 9: sg(w)), so gradients
         flow only through the loss terms, not through the weight values.
@@ -28,8 +34,16 @@ class SpectralDirichletLoss(nn.Module):
         w_dirichlet: Base weight for Dirichlet energy term.
         w_task: Base weight for task (classification) term.
         dynamic_weighting: If True, use adaptive weighting from paper eq. 10.
-        t_orth: Target gram_error = ||C-I||_F for dynamic weighting.
+        t_orth: Target gram_error² = ||C-I||_F² for dynamic weighting.
         t_class: Target task loss for dynamic weighting.
+        phase1_end_step: Step at which Phase 1 ends and metric ramp begins.
+            Phase 1 (0 → phase1_end_step): w_mde = 0 (basis trains without
+            metric interference, equivalent to EFDO-off).
+            Phase 2 (phase1_end_step → phase2_end_step): w_mde ramps linearly
+            from 0 to the dynamic value.
+            Phase 3 (phase2_end_step → end): full dynamic weighting.
+            Set both to 0 to disable three-phase scheduling (legacy behaviour).
+        phase2_end_step: Step at which Phase 2 ends and Phase 3 begins.
     """
 
     def __init__(
@@ -40,6 +54,8 @@ class SpectralDirichletLoss(nn.Module):
         dynamic_weighting: bool = False,
         t_orth: float = 0.1,
         t_class: float = 0.5,
+        phase1_end_step: int = 0,
+        phase2_end_step: int = 0,
     ) -> None:
         super().__init__()
         self.w_gram = w_gram
@@ -48,6 +64,8 @@ class SpectralDirichletLoss(nn.Module):
         self.dynamic_weighting = dynamic_weighting
         self.t_orth = t_orth
         self.t_class = t_class
+        self.phase1_end_step = phase1_end_step
+        self.phase2_end_step = phase2_end_step
 
     def forward(
         self,
@@ -57,6 +75,7 @@ class SpectralDirichletLoss(nn.Module):
         head_out: dict[str, torch.Tensor],
         k: int,
         Ag_pinn: torch.Tensor | None = None,
+        global_step: int = 0,
     ) -> dict[str, torch.Tensor]:
         """Compute all loss components.
 
@@ -66,11 +85,14 @@ class SpectralDirichletLoss(nn.Module):
             A: (B, d, d) metric matrix, or None (identity metric).
             head_out: Output dict from BinaryHead / MulticlassHead.
             k: Current function index (1-based), used for off-diagonal tracking.
+            Ag_pinn: (B, d) pre-applied A(x)∇φ (PINN path, legacy).
+            global_step: Current training step, used for three-phase scheduling.
         Returns:
             Dict with keys: loss, loss_gram, loss_dirichlet, loss_task,
                             gram_error (||C-I||_F, scalar monitor),
                             off_diag_error_k (overlap of φ_k with predecessors),
-                            w_task_eff, w_mde_eff (effective weights, for logging).
+                            w_task_eff, w_mde_eff (effective weights, for logging),
+                            phase (int 1/2/3, for logging).
         """
         B = phi_matrix.shape[0]
 
@@ -116,13 +138,39 @@ class SpectralDirichletLoss(nn.Module):
 
         loss_task = head_out['loss']
 
+        # Three-phase curriculum scheduling.
+        # Phase 1 (0 → phase1_end_step):  basis trains freely, w_mde = 0.
+        # Phase 2 (p1 → phase2_end_step): w_mde ramps linearly 0 → dynamic.
+        # Phase 3 (p2 → end):             full dynamic weighting.
+        # Disabled when both phase end-steps are 0 (legacy behaviour).
+        p1 = self.phase1_end_step
+        p2 = self.phase2_end_step
+        if p2 > p1 > 0:
+            if global_step < p1:
+                current_phase = 1
+                phase_mde_scale = 0.0
+            elif global_step < p2:
+                current_phase = 2
+                phase_mde_scale = (global_step - p1) / float(p2 - p1)
+            else:
+                current_phase = 3
+                phase_mde_scale = 1.0
+        else:
+            current_phase = 3
+            phase_mde_scale = 1.0
+
         # Effective weights — static or dynamic (paper eq. 10).
         if self.dynamic_weighting:
             with torch.no_grad():
                 # Ratios: how far each loss is from its target.
                 # ratio > 1 → loss still far from target → weight suppressed.
                 # ratio < 1 → loss near/below target → weight activates.
-                ratio_gram = gram_error / self.t_orth          # scalar
+                # BUG-FIX: use gram_error**2 (= L_gram = ||C-I||_F²) to match
+                # original paper eq. 10: w_class ∝ exp(-L_orth/T_orth) where
+                # L_orth is the squared Frobenius norm, not the norm itself.
+                # Using gram_error (not squared) over-suppresses w_task by
+                # ~10-12×, preventing MDE from ever receiving gradient signal.
+                ratio_gram = (gram_error ** 2) / self.t_orth   # scalar (fixed)
                 # When w_task=0 (unsupervised), ignore task ratio so MDE
                 # activates based on gram convergence only (ratio_class=0).
                 if self.w_task > 0:
@@ -131,14 +179,14 @@ class SpectralDirichletLoss(nn.Module):
                     ratio_class = gram_error.new_zeros(())
                 # stop-gradient weights (paper eq. 9: sg(w))
                 w_task_eff = self.w_task * torch.exp(-ratio_gram)
-                w_mde_eff = self.w_dirichlet * torch.exp(
+                w_mde_eff = self.w_dirichlet * phase_mde_scale * torch.exp(
                     -torch.max(ratio_gram, ratio_class)
                 )
         else:
             ratio_gram = gram_error.new_tensor(float('nan'))
             ratio_class = gram_error.new_tensor(float('nan'))
             w_task_eff = phi_matrix.new_tensor(self.w_task)
-            w_mde_eff = phi_matrix.new_tensor(self.w_dirichlet)
+            w_mde_eff = phi_matrix.new_tensor(self.w_dirichlet * phase_mde_scale)
 
         total = (
             self.w_gram * loss_gram
@@ -153,6 +201,8 @@ class SpectralDirichletLoss(nn.Module):
             'loss_task': loss_task,
             'gram_error': gram_error.detach(),
             'off_diag_error_k': off_diag_error_k.detach(),
+            'phase': current_phase,             # 1/2/3 for three-phase logging
+            'phase_mde_scale': phase_mde_scale, # 0.0 → 1.0 ramp value
             # Effective weights (same as base weights when dynamic_weighting=False)
             'w_task_eff': w_task_eff.detach(),
             'w_mde_eff': w_mde_eff.detach(),
