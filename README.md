@@ -1,7 +1,6 @@
 # PIEFS — Physics-Informed Eigenfunction Features with Learnable Scaling
 
 Sequential neural eigenfunction learning with a learnable Riemannian metric.
-Submitted to the AI4Physics Workshop @ ICML 2026.
 
 ## Setup
 
