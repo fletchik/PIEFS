@@ -1,13 +1,79 @@
-.venv/
+# ── Python ───────────────────────────────────────────────────────────
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ── Virtual environments ─────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Secrets / credentials (never commit) ─────────────────────────────
+.env
+.env.*
+*.key
+secrets.*
+wandb_key.txt
+
+# ── OS ───────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+
+# ── Training outputs (large, reproducible from code) ─────────────────
 logs/
 outputs/
 wandb/
+
+# ── Model checkpoints ────────────────────────────────────────────────
 *.pt
 *.ckpt
+*.pth
+
+# ── Datasets (auto-downloaded or extracted via scripts/) ─────────────
 data/
+
+# ── Hydra run outputs ────────────────────────────────────────────────
 .hydra/
-articles/
+
+# ── Generated figure PDFs (keep .tex source; PDFs are build outputs) ─
+# Top-level paper figures (small PNGs kept — see paper_0/figures/*.png)
+paper_0/figures/htru2/
+paper_0/figures/two_moon/
+paper_0/figures/mnist/
+paper_0/figures/cifar10/
+paper_0/figures/circles/
+paper_0/figures/plot_final/
+paper_0/figures/unitc/
+paper_0/figures/liss/
+# Compiled paper PDF
+paper_0/main.pdf
+paper_0/*.aux
+paper_0/*.bbl
+paper_0/*.blg
+paper_0/*.log
+paper_0/*.out
+paper_0/*.fls
+paper_0/*.fdb_latexmk
+paper_0/*.synctex.gz
+paper_0/*.toc
+
+# ── Archive binaries (large, not needed for code review) ─────────────
+archive/efdo_source.zip
+archive/paper_drafts/*.pdf
+
+# ── IDE ──────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Jupyter ──────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Deprecated top-level dirs ────────────────────────────────────────
 EFDO/
+articles/
