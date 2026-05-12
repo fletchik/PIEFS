@@ -13,7 +13,6 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 from ..loss.spectral_loss import SpectralDirichletLoss
-from ..model.metric.lambda_u_pinn import LambdaUPinn
 from ..model.spectral_model import SpectralModel
 
 logger = logging.getLogger(__name__)
@@ -132,10 +131,7 @@ class SequentialTrainer:
         """Run the full sequential training pipeline."""
         self._start_time = time.time()
 
-        # Pretrain PINN rotation if needed.
-        if isinstance(self.model.metric, LambdaUPinn):
-            logger.info('Pretraining PINN rotation (5 000 steps)...')
-            self.model.metric.pretrain(steps=5000)
+        # PINN pretraining removed (lambda_u_pinn archived).
 
         for k in range(1, self.K + 1):
             logger.info('=' * 60)
@@ -456,8 +452,8 @@ class SequentialTrainer:
             if grad is not None:
                 if self.model.metric is None:
                     energy = (grad ** 2).mean().item()
-                elif isinstance(self.model.metric, LambdaUPinn):
-                    Ag = self.model.metric.apply_to(x, grad)  # one PINN call
+                elif hasattr(self.model.metric, 'apply_to'):
+                    Ag = self.model.metric.apply_to(x, grad)
                     energy = (Ag ** 2).sum(dim=1).mean().item()
                 else:
                     A = self.model.metric(x)
