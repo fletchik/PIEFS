@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Reproduce all experiments from the EFDO paper.
-# Run from the EFDO/ directory:
-#   cd /path/to/EFDO
+# Reproduce all experiments from the PIEFS paper.
+# Run from the PIEFS/ directory:
+#   cd /path/to/PIEFS
 #   bash scripts/reproduce_all.sh
 #
 # Each group can be run independently by setting GROUPS env var:

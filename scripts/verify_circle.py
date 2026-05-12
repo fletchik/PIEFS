@@ -6,10 +6,10 @@ Pass criteria:
   - λ_1 ≤ λ_2 ≤ λ_3 ≤ λ_4  (eigenvalue ordering, approximated by Dirichlet energy)
   - max correlation of each φ_k with {cos(nθ), sin(nθ)} for n=1,2 > 0.9
 
-Saves a plot to EFDO/logs/verify_circle.png.
+Saves a plot to PIEFS/logs/verify_circle.png.
 
 Run:
-    python EFDO/scripts/verify_circle.py
+    python PIEFS/scripts/verify_circle.py
 """
 
 from __future__ import annotations

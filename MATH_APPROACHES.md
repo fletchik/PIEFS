@@ -73,7 +73,7 @@ $$A = I + UDV^T, \quad U,V \in \mathbb{R}^{d \times r}, \quad D = \text{diag}(\e
 $$A^{*T}A^* = S_W^{-1/2} S_B S_W^{-1/2}$$
 This is the **Fisher Linear Discriminant** matrix, which has rank exactly $C-1$. So $r = C-1$ is theoretically sufficient, and higher $r$ only adds redundancy.
 
-**Identity recovery guarantee**: At initialization $U=V\approx 0$, $D\approx I$, so $A\approx I$ (EFDO-off). The optimizer can only depart from $A=I$ if it reduces the loss — meaning GlobalLowRank is **never worse than EFDO-off** at convergence.
+**Identity recovery guarantee**: At initialization $U=V\approx 0$, $D\approx I$, so $A\approx I$ (PIEFS-off). The optimizer can only depart from $A=I$ if it reduces the loss — meaning GlobalLowRank is **never worse than PIEFS-off** at convergence.
 
 **Pros**: No MLP bottleneck, covers full rank-$r$ space, $O(Bdr)$ cost, gradient flows directly.  
 **Cons**: Not $x$-dependent — one metric for all of $\mathbb{R}^d$.

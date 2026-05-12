@@ -66,7 +66,7 @@ def fig_training_curves():
         ("MNIST",    "mnist_mc",          "EFDO_colab/logs"),
         ("CIFAR-10", "cifar10_features",  "EFDO_colab/logs"),
     ]
-    METRICS = [("off", "#1f77b4", "EFDO-off"), ("diag", "#ff7f0e", "EFDO-diag")]
+    METRICS = [("off", "#1f77b4", "PIEFS-off"), ("diag", "#ff7f0e", "PIEFS-diag")]
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
     fig.suptitle("Validation accuracy over training  (mean ± std, 5 seeds)",
@@ -225,7 +225,7 @@ def fig_gram_matrix():
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
     fig.suptitle(
         f"Gram matrix $C_K = \\mathbb{{E}}[\\Phi\\Phi^\\top]$ "
-        f"after training (MNIST, $K={K}$, EFDO-off, seed 0)",
+        f"after training (MNIST, $K={K}$, PIEFS-off, seed 0)",
         fontsize=11, fontweight="bold")
 
     # Left: heatmap

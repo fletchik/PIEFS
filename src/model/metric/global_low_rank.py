@@ -36,7 +36,7 @@ This class eliminates both problems by abandoning the pointwise-MLP design:
      iff ||A∇φ||² depends on them — i.e. as soon as training begins
      and the basis produces nonzero gradients ∇φ_k. The optimizer can
      only move away from A=I if doing so reduces the loss, guaranteeing
-     that GlobalLowRank is never worse than EFDO-off at convergence
+     that GlobalLowRank is never worse than PIEFS-off at convergence
      (modulo local minima).
 
   •  LDA connection. The optimal linear map A* for maximising class
@@ -56,7 +56,7 @@ The Modified Dirichlet Energy becomes:
 
     ||Av||² = ||v + U D V^T v||²
 
-which is always ≥ 0 and collapses to ||v||² (EFDO-off) when U=V=0.
+which is always ≥ 0 and collapses to ||v||² (PIEFS-off) when U=V=0.
 
 The full matrix is A = I + U diag(exp(log_d)) V^T ∈ R^(d×d), but we never
 materialise it during training — apply_to uses O(B·d·r) instead of O(B·d²).

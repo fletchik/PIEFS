@@ -9,7 +9,7 @@ Raw features (no embedding):
 Dimensionality-reduction / embedding methods (Tier A):
   - PCA                           (linear, det reduction)
   - KernelPCA (rbf, poly, cosine) (nonlinear kernel methods)
-  - SpectralEmbedding             (graph-Laplacian eigenvectors — closest to EFDO)
+  - SpectralEmbedding             (graph-Laplacian eigenvectors — closest to PIEFS)
   - TruncatedSVD                  (linear, sparse-friendly)
 
 Classifier applied on top of embeddings: LogisticRegression + L-BFGS.

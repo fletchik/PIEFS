@@ -10,7 +10,7 @@ Pass criteria:
   - Eigenvalue ordering: λ_1 ≤ λ_2 ≤ λ_3 (approx. by Dirichlet energy).
 
 Run:
-    python EFDO/scripts/verify_gram.py
+    python PIEFS/scripts/verify_gram.py
 """
 
 from __future__ import annotations

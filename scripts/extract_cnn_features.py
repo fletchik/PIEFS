@@ -3,12 +3,12 @@
 Uses torchvision's pretrained ResNet-18 (ImageNet weights). The CIFAR-10
 images (32×32) are upsampled to 224×224 and normalised per ImageNet stats
 before passing through the network.  The output of the avgpool layer
-(512-dim) is saved as a numpy array for later use by EFDO.
+(512-dim) is saved as a numpy array for later use by PIEFS.
 
 Motivation (advisor suggestion):
-    EFDO operates on flat feature vectors; raw CIFAR-10 pixels (3072-dim
+    PIEFS operates on flat feature vectors; raw CIFAR-10 pixels (3072-dim
     with high spatial redundancy) are hard to cluster without any visual
-    backbone.  Extracting 512-dim ResNet-18 features gives EFDO access to
+    backbone.  Extracting 512-dim ResNet-18 features gives PIEFS access to
     semantically meaningful representations while keeping the method
     itself (eigenfunctions of MDE) unchanged.
 

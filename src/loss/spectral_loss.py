@@ -37,7 +37,7 @@ class SpectralDirichletLoss(nn.Module):
         t_class: Target task loss for dynamic weighting.
         phase1_end_step: Step at which Phase 1 ends and metric ramp begins.
             Phase 1 (0 → phase1_end_step): w_mde = 0 (basis trains without
-            metric interference, equivalent to EFDO-off).
+            metric interference, equivalent to PIEFS-off).
             Phase 2 (phase1_end_step → phase2_end_step): w_mde ramps linearly
             from 0 to the dynamic value.
             Phase 3 (phase2_end_step → end): full dynamic weighting.

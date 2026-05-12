@@ -61,7 +61,7 @@ def fig_gram_error_convergence():
         s = np.nanstd(arr, axis=0)
         xs = np.array(steps_ref) / 1000
         
-        ax.plot(xs, m, color="#1f77b4", lw=2.5, label="EFDO-off")
+        ax.plot(xs, m, color="#1f77b4", lw=2.5, label="PIEFS-off")
         ax.fill_between(xs, m - s, m + s, alpha=0.2, color="#1f77b4")
         
         ax.set_title(ds_label)
@@ -112,7 +112,7 @@ def fig_k_ablation():
     stds = [np.std(k_vals[k]) for k in ks]
     
     ax.errorbar(ks, means, yerr=stds, fmt='o-', color="#2ca02c", 
-                markersize=8, linewidth=2.5, capsize=5, capthick=2, label="EFDO-off")
+                markersize=8, linewidth=2.5, capsize=5, capthick=2, label="PIEFS-off")
     ax.fill_between(ks, np.array(means) - np.array(stds), np.array(means) + np.array(stds),
                     alpha=0.2, color="#2ca02c")
     

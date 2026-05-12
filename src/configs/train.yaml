@@ -50,7 +50,7 @@ model:
   normalize_det: false        # false = free scaling (recommended)
 
 # Three-phase curriculum scheduling for MDE term.
-# Phase 1 (0 → phase1_end_step):    w_mde = 0  (basis trains as EFDO-off)
+# Phase 1 (0 → phase1_end_step):    w_mde = 0  (basis trains as PIEFS-off)
 # Phase 2 (p1 → phase2_end_step):   w_mde ramps linearly from 0 to dynamic value
 # Phase 3 (p2 → total_steps):       full dynamic weighting (paper eq. 10, fixed)
 # Set both to 0 to disable (legacy behaviour — only dynamic exponential weights).

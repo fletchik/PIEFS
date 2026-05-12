@@ -1,4 +1,4 @@
-# EFDO — Eigenfunction Decomposition via Dirichlet Operator
+# PIEFS — Physics-Informed Eigenfunction Features with Learnable Scaling
 
 Sequential neural eigenfunction learning using a learnable Riemannian metric.
 

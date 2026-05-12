@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# run_main_grid.sh  —  Main experiment grid for EFDO paper
+# run_main_grid.sh  —  Main experiment grid for PIEFS paper
 #
 # Grid:  4 datasets × 3 metrics × 5 seeds  =  60 runs
 #

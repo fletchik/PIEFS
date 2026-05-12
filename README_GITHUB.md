@@ -15,7 +15,7 @@ The method achieves competitive accuracy on benchmark datasets (Two Moons, Circl
 
 ## Key Results
 
-| Dataset | RF | LR | NeuralEF* | EFDO-off | PIEFS-diag | PIEFS-trotter |
+| Dataset | RF | LR | NeuralEF* | PIEFS-off | PIEFS-diag | PIEFS-trotter |
 |---------|----|----|-----------|----------|-----------|--------------|
 | Two Moons | 99.77±0.04 | 87.80±0.00 | --- | **100.00±0.00** | 99.97±0.04 | 99.99±0.03 |
 | Circles | 98.53±0.11 | 50.40±0.00 | --- | 78.23±14.90 | 79.16±4.82 | **83.59±15.70** |
@@ -187,7 +187,7 @@ Where:
 
 Three variants:
 
-1. **EFDO-off**: A(x) = I (identity, no scaling)
+1. **PIEFS-off**: A(x) = I (identity, no scaling)
 2. **PIEFS-diag**: A(x) = Λ(x) with Λᵢᵢ(x) ∈ [0.1, 10]
 3. **PIEFS-trotter**: A(x) = Λ(x)·U_Trotter(ω(x)) with Givens rotations via Trotter fixed-point
 
