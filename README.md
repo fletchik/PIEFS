@@ -2,10 +2,6 @@
 
 > Sequential neural eigenfunction learning with a learnable Riemannian metric.
 
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![PyTorch](https://img.shields.io/badge/pytorch-2.x-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
-
 📄 **[Paper (PDF)](paper_0/main.pdf)**
 
 ---
