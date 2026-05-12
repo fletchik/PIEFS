@@ -74,7 +74,7 @@ archive/docs_old/
 
 # ── Jupyter ──────────────────────────────────────────────────────────
 .ipynb_checkpoints/
-*.ipynb
+# Notebooks in notebooks/ are tracked — no blanket *.ipynb ignore
 
 # ── Deprecated top-level dirs ────────────────────────────────────────
 articles/
