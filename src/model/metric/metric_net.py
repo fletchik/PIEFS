@@ -54,7 +54,7 @@ def build_metric(
                        (Information geometry, Amari 1985). MLP approximation of FIM.
 
     ── Deprecated (moved to archive/src_deprecated/) ────────────────────────
-    "lambda_u_pinn":   Buggy nonlinearity (audit §1.5, §1.6, §2.12). Archived.
+    "lambda_u_pinn":   Nonlinearity bug in apply_to() — archived.
     "lambda_u_sparse": Superseded by 'lambda_u_trotter'. Archived.
 
     Args:

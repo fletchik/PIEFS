@@ -171,11 +171,9 @@ class GraphLaplacianPretrain:
     def compute_t_class(self, val_fraction: float = 0.2) -> float:
         """Train LR on GL eigenvectors, evaluate on held-out slice → T_class.
 
-        FIX (P1, CODE_AUDIT_REPORT §2.9):
-          Previously fit and evaluated on the same data (training log-loss),
-          which is a lower bound and causes w_mde to activate earlier than
-          it should.  Now uses an 80/20 stratified split so T_class is an
-          honest out-of-sample estimate.
+        Uses an 80/20 stratified split so T_class is an honest
+        out-of-sample estimate (fitting and evaluating on the same data
+        gives a lower bound and causes w_mde to activate too early).
 
         Args:
             val_fraction: Fraction of GL subsample held out for evaluation.
@@ -239,10 +237,9 @@ class GraphLaplacianPretrain:
         X_torch = torch.tensor(self._X_gl, dtype=torch.float32, device=self.device)
         targets = torch.tensor(self._eigenvecs, dtype=torch.float32, device=self.device)
 
-        # FIX (P2, CODE_AUDIT_REPORT §2.8): removed `loss = torch.tensor(0.0)`
-        # fallback.  If distill_steps == 0, the loop body never runs and
-        # `loss.item()` in the final log line would silently print 0.0,
-        # making it look like perfect distillation when none happened.
+        # No fallback loss=0 tensor: if distill_steps==0, loop body never
+        # runs and loss.item() would silently print 0.0 (false "perfect
+        # distillation"). Instead, guard the final log line explicitly.
         if self.distill_steps <= 0:
             log.warning(
                 'GL: distill_steps=%d — skipping distillation, '

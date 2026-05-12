@@ -1,24 +1,23 @@
-"""LambdaUTrotter: replacement for LambdaUPinn that fixes audit bugs §1.5, §1.6, §2.12.
+"""LambdaUTrotter: Trotter-product rotation metric replacing the PINN-based variant.
 
 Why this exists
 ---------------
-LambdaUPinn used a frozen MLP to approximate expm(ω(x))·v.  The audit found
-three problems:
+The previous LambdaUPinn used a frozen MLP to approximate expm(ω(x))·v.
+Three correctness issues motivated replacing it:
 
-  §1.5  apply_to() divides by ‖w‖, calls PINN on a unit vector, then multiplies
-        by ‖w‖.  This assumes U·(αv) = α·(U·v), i.e. linearity in v.  But the
-        PINN is MLP+Tanh — Tanh is NOT linear.  So ‖A∇φ‖² is biased.
+  (1) apply_to() divided by ‖w‖, called the PINN on a unit vector, then
+      multiplied by ‖w‖.  This assumes linearity in v, but MLP+Tanh is
+      NOT linear — so ‖A∇φ‖² was biased.
 
-  §1.6  After pretraining on iid Gaussian ω, the PINN is FROZEN forever.
-        _omega_mlp(x) outputs values that drift outside the [−3, 3] range
-        the PINN saw during pretraining → silent OOD failure.
+  (2) After pretraining on iid Gaussian ω, the PINN was frozen.  During
+      training, _omega_mlp(x) drifted outside its pretraining range →
+      silent out-of-distribution failure.
 
-  §2.12 _omega_mlp has unbounded Linear output.  After Tanh+Linear it can
-        emit angles outside [-π, π] which makes no geometric sense and
-        further amplifies OOD problems.
+  (3) The output layer of _omega_mlp was unbounded, allowing angles
+      outside [−π, π] — geometrically undefined and numerically unstable.
 
-This class replaces the entire PINN machinery with a *direct* Trotter
-product of Givens rotations.  The result is:
+This class replaces the PINN with a *direct* Trotter product of Givens
+rotations.  The result is:
 
   •  Exact orthogonality:  U is a true rotation (product of 2D rotations).
   •  Exact 1-homogeneity in v:  R·(αv) = α·(R·v) by linearity of rotation.
@@ -36,7 +35,7 @@ where R_i is the 2D rotation in the (i, i+1) plane by angle ω_i.  This is
 NOT identical to expm(skew_first_offdiag(ω)) but is itself a valid orthogonal
 matrix lying in a (d−1)-parameter subgroup of SO(d).  For an unconstrained
 SO(d) approximation pass two or three Trotter sweeps with shifted angles
-(see RESEARCH_PLAN.md §1.3 Proposal C — multi-pass Trotter).
+(see RESEARCH_PLAN.md — multi-pass Trotter section).
 """
 from __future__ import annotations
 

@@ -96,7 +96,7 @@ class SequentialTrainer:
         self.skip_oom = skip_oom
         self.noise_std = noise_std
         self.wide_normal_fraction = wide_normal_fraction
-        # FIX (P0, §1.7): max_grad_norm=None disables clipping by default.
+        # max_grad_norm=None disables clipping by default.
         # The old hardcoded 1.0 was too aggressive — it collapses the gradient
         # norm to 1.0 regardless of which loss term is dominant, thereby
         # undoing the dynamic weighting schedule (w_task_eff, w_mde_eff).
@@ -304,7 +304,7 @@ class SequentialTrainer:
         # Gradient clipping — disabled by default (max_grad_norm=None).
         # Enable via train.py config only if gradients diverge on a specific
         # dataset. A hardcoded 1.0 was previously used but it overrode the
-        # dynamic weighting schedule (see CODE_AUDIT_REPORT §1.7).
+        # dynamic weighting schedule.
         if self.max_grad_norm is not None:
             grad_norm = torch.nn.utils.clip_grad_norm_(
                 [p for p in self.model.parameters() if p.requires_grad],
@@ -322,7 +322,6 @@ class SequentialTrainer:
     def _evaluate(self) -> dict[str, float]:
         self.model.eval()
         all_probs, all_labels = [], []
-        # FIX (P1, CODE_AUDIT_REPORT §2.6):
         # Collect all φ_matrix rows across batches so the Gram matrix is
         # computed on the FULL validation set in one shot.
         # Old code averaged per-batch ‖C_batch − I‖_F, which is NOT the
@@ -397,10 +396,8 @@ class SequentialTrainer:
     ) -> dict[str, float]:
         """Compute full-dataset orthogonality error on a given DataLoader.
 
-        FIX (P2, CODE_AUDIT_REPORT §2.4):
-          Renamed from _compute_gram_error_final (misleading — it ran on val,
-          not the full dataset).  Now accepts a loader so callers can pass
-          either self.val_loader or self.train_loader.
+        Accepts a loader so callers can pass either self.val_loader or
+        self.train_loader (previously hardcoded to val).
 
         Returns keys: gram_error_{loader_name}, gram_error_offdiag_{loader_name},
                        gram_error_diag_{loader_name}
@@ -562,9 +559,9 @@ class SequentialTrainer:
             name = f'checkpoint_{global_step // 1000}k.pt'
 
         path = self.checkpoint_dir / name
-        # FIX (P3, §3.3 + §2.14): save _best_val_acc and criterion.t_class
-        # so resume / analysis tools can read the model-selection threshold
-        # and the GL-derived T_class without re-running GL pretraining.
+        # Save _best_val_acc and criterion.t_class so resume / analysis
+        # tools can read the model-selection threshold and the GL-derived
+        # T_class without re-running GL pretraining.
         state = {
             'global_step': global_step,
             'current_function_k': self.model._active_k,

@@ -49,6 +49,7 @@ paper_0/figures/circles/
 paper_0/figures/plot_final/
 paper_0/figures/unitc/
 paper_0/figures/liss/
+paper_0/figures/spotify/
 # Compiled paper PDF
 paper_0/main.pdf
 paper_0/*.aux
@@ -73,6 +74,7 @@ archive/paper_drafts/
 
 # ── Jupyter ──────────────────────────────────────────────────────────
 .ipynb_checkpoints/
+*.ipynb
 
 # ── Deprecated top-level dirs ────────────────────────────────────────
 EFDO/

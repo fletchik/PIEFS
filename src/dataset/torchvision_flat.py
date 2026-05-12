@@ -58,10 +58,8 @@ class TorchvisionFlatDataset(Dataset):
 
         # Carve val from train BEFORE computing standardisation statistics
         # so that mean/std are computed on train-only indices.
-        # FIX (P2, CODE_AUDIT_REPORT §1.1):
-        #   Old order: standardise X_train (full) → carve val.
-        #   This leaked val-point statistics into the normaliser.
-        #   New order: carve first → standardise only on train_idx.
+        # Note: carve first → standardise only on train_idx, to avoid
+        # leaking val-point statistics into the normaliser.
         n_total = len(X_train)
         n_val = int(n_total * val_fraction)
         rng = torch.Generator().manual_seed(seed)

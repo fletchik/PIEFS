@@ -96,7 +96,7 @@ class SpectralDirichletLoss(nn.Module):
         B = phi_matrix.shape[0]
 
         # Gram matrix and orthogonality loss.
-        # NOTE (audit §1.3, intentionally deferred):
+        # NOTE: minor discrepancy between code and paper, intentionally kept:
         #   Code computes:  loss_gram = ‖Ê[φφᵀ] − I‖²_F  (bias of MC estimator, squared)
         #   Paper Eq. 7:    L_gram = Σ_{αβ} E[(φ_α φ_β − δ_αβ)²]  (variance-aware)
         # These differ when φ_α φ_β has non-zero variance across samples.

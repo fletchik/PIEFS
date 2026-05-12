@@ -71,9 +71,9 @@ def main(cfg: DictConfig) -> None:
 
     K = cfg.model.K
     input_dim = ds_cfg.input_dim
-    # output_bias=False: recommended for new experiments (see §1.4 audit).
-    # Default True keeps backward-compat with all checkpoints trained before
-    # this commit.  Set model.output_bias: false in YAML for new runs.
+    # output_bias=False: recommended for new experiments.
+    # Default True keeps backward-compat with checkpoints trained before
+    # this option was added.  Set model.output_bias: false in YAML for new runs.
     output_bias = bool(cfg.model.get('output_bias', True))
     basis_set = BasisSet(K=K, input_dim=input_dim,
                          hidden_dims=list(cfg.model.hidden_dims),
@@ -187,7 +187,7 @@ def main(cfg: DictConfig) -> None:
     wide_normal_fraction = float(aug_cfg.get('wide_normal_fraction', 0.0))
 
     # Gradient clipping: None = disabled (default).
-    # Old hardcoded 1.0 destroyed dynamic weighting schedule (§1.7 audit).
+    # Old hardcoded 1.0 overrode the dynamic weighting schedule.
     max_grad_norm_raw = cfg.trainer.get('max_grad_norm', None)
     max_grad_norm = float(max_grad_norm_raw) if max_grad_norm_raw is not None else None
 
@@ -248,8 +248,8 @@ def main(cfg: DictConfig) -> None:
         trainer._metrics_history = ckpt.get('metrics_history', {})
         trainer._eigenvalue_history = ckpt.get('eigenvalue_history', [])
         trainer._wall_time_per_function = ckpt.get('wall_time_per_function', [])
-        # FIX (P3, §3.3 + §2.14): restore best_val_acc and t_class on resume
-        # so model-selection threshold is not reset to -1.0.
+        # Restore best_val_acc and t_class on resume so the model-selection
+        # threshold is not reset to -1.0.
         if 'best_val_acc' in ckpt:
             trainer._best_val_acc = ckpt['best_val_acc']
         if 'T_class' in ckpt and hasattr(trainer.criterion, 't_class'):
