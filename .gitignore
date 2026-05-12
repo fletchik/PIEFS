@@ -50,8 +50,7 @@ paper_0/figures/plot_final/
 paper_0/figures/unitc/
 paper_0/figures/liss/
 paper_0/figures/spotify/
-# Compiled paper PDF
-paper_0/main.pdf
+# LaTeX build artefacts (main.pdf is tracked — keep it committed)
 paper_0/*.aux
 paper_0/*.bbl
 paper_0/*.blg
