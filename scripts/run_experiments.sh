@@ -1,158 +1,223 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================
-# PIEFS Diagnostic Experiments — CIKM 2026
+# PIEFS — Experiment runner for CIKM 2026
 # ============================================================
-# Run from project root:
+# Run from the project root:
 #   bash scripts/run_experiments.sh [group]
 #
-# Groups:
-#   D0  — quick sanity: use_gram_squared comparison on htru2 (~5 min CPU)
-#   D1  — metric ablation on two_moon + htru2 (all 7 metric types)
-#   D2  — metric ablation on mnist (off, conformal, diag, global_low_rank)
-#   D3  — rank ablation (r=1,3,5,9,16) on htru2
-#   D4  — use_gram_squared ablation on mnist
-#   D5  — three-phase curriculum ablation on htru2
-#   all — run all groups sequentially (long!)
+# Groups (in recommended CPU order):
+#   D0  — sanity smoke test (~5 min)
+#   D5  — curriculum ablation on htru2 (~1.5 h)
+#   D3  — rank ablation on htru2 (~2 h)
+#   D1  — metric ablation on 2D datasets (~3 h)
+#   D4  — dynamic weighting ablation on htru2 (~1.5 h)
+#   D2  — main table: htru2 full metric ablation (~2 h)
+#   D6  — main table: MNIST multiclass  [GPU recommended, ~8 h GPU / ~30 h CPU]
+#   all — all groups sequentially
+#
+# Set SEEDS to run fewer seeds for a quicker check:
+#   SEEDS="42 1337" bash scripts/run_experiments.sh D2
 # ============================================================
 
-set -e
-PYTHON="${PYTHON:-python3}"
-SEEDS=(42 1337 0 7 99)
-LOG_DIR="logs"
-WRITER_MODE="${WRITER_MODE:-disabled}"   # set to 'online' for WandB
+set -euo pipefail
+
+# ── Python interpreter ──────────────────────────────────────
+# Walk up from the project root looking for a .venv, then fall back to
+# PYTHON env-var or system python3. This handles both a checkout at the
+# repo root and a git-worktree layout (project root inside .claude/worktrees/).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PYTHON=""
+SEARCH_DIR="$PROJECT_ROOT"
+for _i in 1 2 3 4; do
+    if [ -x "$SEARCH_DIR/.venv/bin/python3" ]; then
+        PYTHON="$SEARCH_DIR/.venv/bin/python3"
+        break
+    fi
+    SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+done
+if [ -z "$PYTHON" ]; then
+    PYTHON="${PYTHON_OVERRIDE:-python3}"
+fi
+echo "[run_experiments] Using Python: $PYTHON"
+
+# ── Seeds (override with: SEEDS="42 1337" bash ...) ─────────
+SEEDS="${SEEDS:-42 1337 0}"
+LOG_DIR="${LOG_DIR:-logs}"
+WRITER_MODE="${WRITER_MODE:-disabled}"   # set WRITER_MODE=online for WandB
+
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
 
 run() {
-    echo ""
-    echo ">>> $@"
-    $PYTHON train.py "$@" writer.mode=$WRITER_MODE trainer.seed=${SEED:-42}
+    # Usage: run run_id=<id> [extra hydra args...]
+    log ">>> $*"
+    "$PYTHON" "$PROJECT_ROOT/train.py" "$@" writer.mode="$WRITER_MODE"
+    log "    done."
 }
 
 GROUP="${1:-D0}"
 
 # ============================================================
-# D0: use_gram_squared comparison on htru2 — FASTEST diagnostic
-# Answers: does the g_k² fix actually improve things?
-# Expected: use_gram_squared=true (fixed) > false (original bug)
+# D0 — Sanity smoke test (~5 min)
+# Just confirms the pipeline runs end-to-end before long runs.
 # ============================================================
 if [[ "$GROUP" == "D0" || "$GROUP" == "all" ]]; then
-    echo "=== D0: g_k² bug fix comparison (htru2) ==="
-    for SEED in 42 1337 0; do
-        run run_id=D0_htru2_gk_fixed_s${SEED} \
-            dataset=htru2 model.metric_type=diag model.K=6 \
-            criterion.dynamic_weighting=true criterion.use_gram_squared=true \
-            trainer.total_steps=60000 trainer.seed=${SEED}
-
-        run run_id=D0_htru2_gk_orig_s${SEED} \
-            dataset=htru2 model.metric_type=diag model.K=6 \
-            criterion.dynamic_weighting=true criterion.use_gram_squared=false \
-            trainer.total_steps=60000 trainer.seed=${SEED}
-    done
+    log "=== D0: Sanity smoke (two_moon K=3, 3000 steps) ==="
+    run run_id=D0_smoke \
+        dataset=two_moon model.K=3 model.metric_type=off \
+        trainer.total_steps=3000 trainer.seed=42
+    log "=== D0 complete — pipeline OK ==="
 fi
 
 # ============================================================
-# D1: Metric ablation — two_moon (fast, 2D visualization)
-# All 7 metric types; 3 seeds each
-# Expected: conformal > off, global_low_rank > diag
-# ============================================================
-if [[ "$GROUP" == "D1" || "$GROUP" == "all" ]]; then
-    echo "=== D1: Metric ablation — two_moon ==="
-    for MTYPE in off conformal diag lambda_u_trotter global_low_rank local_low_rank fisher_diag; do
-        for SEED in 42 1337 0; do
-            EXTRA_ARGS=""
-            if [[ "$MTYPE" == "global_low_rank" || "$MTYPE" == "local_low_rank" ]]; then
-                EXTRA_ARGS="model.low_rank_r=1"  # binary: r=1 is optimal
-            fi
-            run run_id=D1_two_moon_${MTYPE}_s${SEED} \
-                dataset=two_moon model.metric_type=$MTYPE model.K=6 \
-                criterion.dynamic_weighting=true criterion.use_gram_squared=true \
-                trainer.total_steps=60000 trainer.seed=${SEED} $EXTRA_ARGS
-        done
-    done
-fi
-
-# ============================================================
-# D2: Metric ablation — mnist_multiclass (main table)
-# Key metrics only (off, conformal, diag, global_low_rank); 5 seeds
-# ============================================================
-if [[ "$GROUP" == "D2" || "$GROUP" == "all" ]]; then
-    echo "=== D2: Metric ablation — mnist_multiclass ==="
-    for MTYPE in off conformal diag global_low_rank local_low_rank; do
-        for SEED in "${SEEDS[@]}"; do
-            EXTRA_ARGS=""
-            if [[ "$MTYPE" == "global_low_rank" || "$MTYPE" == "local_low_rank" ]]; then
-                EXTRA_ARGS="model.low_rank_r=9"  # 10 classes: r=C-1=9
-                if [[ "$MTYPE" == "global_low_rank" ]]; then
-                    EXTRA_ARGS="$EXTRA_ARGS curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000"
-                fi
-            fi
-            run run_id=D2_mnist_${MTYPE}_s${SEED} \
-                dataset=mnist_multiclass model.metric_type=$MTYPE model.K=16 \
-                criterion.dynamic_weighting=true criterion.use_gram_squared=true \
-                trainer.total_steps=60000 trainer.seed=${SEED} $EXTRA_ARGS
-        done
-    done
-fi
-
-# ============================================================
-# D3: Rank ablation — htru2
-# Vary r ∈ {1, 2, 4, 8, 16} for global_low_rank
-# Tests: is r=C-1=1 optimal for binary? Or does extra rank help?
-# ============================================================
-if [[ "$GROUP" == "D3" || "$GROUP" == "all" ]]; then
-    echo "=== D3: Rank ablation — htru2, global_low_rank ==="
-    for R in 1 2 4 8 16; do
-        for SEED in 42 1337 0; do
-            run run_id=D3_htru2_glr_r${R}_s${SEED} \
-                dataset=htru2 model.metric_type=global_low_rank model.K=6 \
-                model.low_rank_r=${R} \
-                criterion.dynamic_weighting=true criterion.use_gram_squared=true \
-                curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000 \
-                trainer.total_steps=60000 trainer.seed=${SEED}
-        done
-    done
-fi
-
-# ============================================================
-# D4: use_gram_squared ablation — mnist_multiclass
-# Full comparison: fixed vs. original on MNIST
-# ============================================================
-if [[ "$GROUP" == "D4" || "$GROUP" == "all" ]]; then
-    echo "=== D4: use_gram_squared ablation — mnist ==="
-    for GSQ in true false; do
-        for SEED in 42 1337 0; do
-            run run_id=D4_mnist_gsq${GSQ}_s${SEED} \
-                dataset=mnist_multiclass model.metric_type=off model.K=16 \
-                criterion.dynamic_weighting=true criterion.use_gram_squared=${GSQ} \
-                trainer.total_steps=60000 trainer.seed=${SEED}
-        done
-    done
-fi
-
-# ============================================================
-# D5: Three-phase curriculum ablation — htru2, global_low_rank
-# Compare: no curriculum (p1=p2=0) vs. 50/75% schedule
+# D5 — Curriculum ablation on htru2 (~1.5 h, 6 runs)
+# Question: does the 3-phase schedule help global_low_rank?
+# No curriculum (p1=p2=0)  vs.  50%/75% schedule
+# Expected: curriculum wins (Dirichlet energy activated gradually)
 # ============================================================
 if [[ "$GROUP" == "D5" || "$GROUP" == "all" ]]; then
-    echo "=== D5: Three-phase curriculum — htru2, global_low_rank ==="
-    for SEED in 42 1337 0; do
-        # No curriculum
-        run run_id=D5_htru2_glr_nocurr_s${SEED} \
-            dataset=htru2 model.metric_type=global_low_rank model.K=6 \
-            model.low_rank_r=1 \
-            criterion.dynamic_weighting=true criterion.use_gram_squared=true \
+    log "=== D5: Curriculum ablation — htru2, global_low_rank ==="
+    for SEED in $SEEDS; do
+        run run_id=D5_htru2_glr_nocurr_s"${SEED}" \
+            dataset=htru2 model.K=6 \
+            model.metric_type=global_low_rank model.low_rank_r=1 \
+            criterion.dynamic_weighting=true \
             curriculum.phase1_end_step=0 curriculum.phase2_end_step=0 \
-            trainer.total_steps=60000 trainer.seed=${SEED}
+            trainer.total_steps=60000 trainer.seed="${SEED}"
 
-        # With curriculum (50%/75%)
-        run run_id=D5_htru2_glr_curr_s${SEED} \
-            dataset=htru2 model.metric_type=global_low_rank model.K=6 \
-            model.low_rank_r=1 \
-            criterion.dynamic_weighting=true criterion.use_gram_squared=true \
+        run run_id=D5_htru2_glr_curr_s"${SEED}" \
+            dataset=htru2 model.K=6 \
+            model.metric_type=global_low_rank model.low_rank_r=1 \
+            criterion.dynamic_weighting=true \
             curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000 \
-            trainer.total_steps=60000 trainer.seed=${SEED}
+            trainer.total_steps=60000 trainer.seed="${SEED}"
     done
+    log "=== D5 complete ==="
 fi
 
-echo ""
-echo "=== Experiments complete. Results in $LOG_DIR/ ==="
-echo "    Collect results: python scripts/collect_grid_results.py --log_dir $LOG_DIR"
+# ============================================================
+# D3 — Rank ablation on htru2 (~2 h, 12 runs)
+# Question: is r=C-1=1 really optimal for binary classification?
+# Tests r ∈ {1, 2, 4, 8} with global_low_rank + curriculum
+# Expected: r=1 ≥ r=2 > r=4 > r=8 (LDA theorem: rank C-1 = 1)
+# ============================================================
+if [[ "$GROUP" == "D3" || "$GROUP" == "all" ]]; then
+    log "=== D3: Rank ablation — htru2, global_low_rank ==="
+    for R in 1 2 4 8; do
+        for SEED in $SEEDS; do
+            run run_id=D3_htru2_glr_r"${R}"_s"${SEED}" \
+                dataset=htru2 model.K=6 \
+                model.metric_type=global_low_rank model.low_rank_r="${R}" \
+                criterion.dynamic_weighting=true \
+                curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000 \
+                trainer.total_steps=60000 trainer.seed="${SEED}"
+        done
+    done
+    log "=== D3 complete ==="
+fi
+
+# ============================================================
+# D1 — Metric ablation on 2D datasets (~3 h, 20 runs)
+# All 5 metrics on two_moon and circles; 2 seeds each
+# Goal: eigenfunction visualizations for the paper
+# Expected: global_low_rank ≥ conformal > diag > off
+# ============================================================
+if [[ "$GROUP" == "D1" || "$GROUP" == "all" ]]; then
+    log "=== D1: Metric ablation — two_moon + circles ==="
+    for DATASET in two_moon circles; do
+        for MTYPE in off diag conformal global_low_rank local_low_rank; do
+            EXTRA=""
+            if [[ "$MTYPE" == "global_low_rank" || "$MTYPE" == "local_low_rank" ]]; then
+                EXTRA="model.low_rank_r=1"   # binary: r = C-1 = 1
+            fi
+            for SEED in $SEEDS; do
+                run run_id=D1_"${DATASET}"_"${MTYPE}"_s"${SEED}" \
+                    dataset="${DATASET}" model.K=6 \
+                    model.metric_type="${MTYPE}" \
+                    criterion.dynamic_weighting=true \
+                    trainer.total_steps=60000 trainer.seed="${SEED}" \
+                    $EXTRA
+            done
+        done
+    done
+    log "=== D1 complete ==="
+fi
+
+# ============================================================
+# D4 — Dynamic weighting ablation on htru2 (~1.5 h, 6 runs)
+# Question: does the adaptive w_task / w_mde schedule matter?
+# dynamic_weighting=true (paper eq. 10) vs. false (fixed weights)
+# Expected: dynamic > static (weights prevent metric from suppressing
+#           Gram term before orthogonality is established)
+# ============================================================
+if [[ "$GROUP" == "D4" || "$GROUP" == "all" ]]; then
+    log "=== D4: Dynamic weighting ablation — htru2, off ==="
+    for SEED in $SEEDS; do
+        run run_id=D4_htru2_off_static_s"${SEED}" \
+            dataset=htru2 model.K=6 model.metric_type=off \
+            criterion.dynamic_weighting=false \
+            trainer.total_steps=60000 trainer.seed="${SEED}"
+
+        run run_id=D4_htru2_off_dynamic_s"${SEED}" \
+            dataset=htru2 model.K=6 model.metric_type=off \
+            criterion.dynamic_weighting=true \
+            trainer.total_steps=60000 trainer.seed="${SEED}"
+    done
+    log "=== D4 complete ==="
+fi
+
+# ============================================================
+# D2 — Main table: htru2, all 5 metrics (~2 h, 15 runs)
+# The clean ablation table for the paper.
+# ============================================================
+if [[ "$GROUP" == "D2" || "$GROUP" == "all" ]]; then
+    log "=== D2: Main table — htru2, 5 metrics ==="
+    for MTYPE in off diag conformal global_low_rank local_low_rank; do
+        EXTRA=""
+        if [[ "$MTYPE" == "global_low_rank" ]]; then
+            EXTRA="model.low_rank_r=1 curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000"
+        elif [[ "$MTYPE" == "local_low_rank" ]]; then
+            EXTRA="model.low_rank_r=1"
+        fi
+        for SEED in $SEEDS; do
+            run run_id=D2_htru2_"${MTYPE}"_s"${SEED}" \
+                dataset=htru2 model.K=6 \
+                model.metric_type="${MTYPE}" \
+                criterion.dynamic_weighting=true \
+                trainer.total_steps=60000 trainer.seed="${SEED}" \
+                $EXTRA
+        done
+    done
+    log "=== D2 complete ==="
+fi
+
+# ============================================================
+# D6 — Main table: MNIST 10-class, all 5 metrics
+# [!] GPU strongly recommended — ~8 h on A100, ~30 h on CPU.
+# Runs 3 seeds to keep runtime manageable.
+# global_low_rank: r=9 (= C-1 = 10-1), three-phase curriculum
+# ============================================================
+if [[ "$GROUP" == "D6" || "$GROUP" == "all" ]]; then
+    log "=== D6: Main table — MNIST multiclass, 5 metrics ==="
+    log "    [!] This is long — GPU recommended."
+    for MTYPE in off diag conformal global_low_rank local_low_rank; do
+        EXTRA=""
+        if [[ "$MTYPE" == "global_low_rank" ]]; then
+            EXTRA="model.low_rank_r=9 curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000"
+        elif [[ "$MTYPE" == "local_low_rank" ]]; then
+            EXTRA="model.low_rank_r=9"
+        fi
+        for SEED in $SEEDS; do
+            run run_id=D6_mnist_"${MTYPE}"_s"${SEED}" \
+                dataset=mnist_multiclass model.K=16 model.task=multiclass \
+                model.metric_type="${MTYPE}" \
+                criterion.dynamic_weighting=true \
+                trainer.total_steps=60000 trainer.seed="${SEED}" \
+                $EXTRA
+        done
+    done
+    log "=== D6 complete ==="
+fi
+
+log "=== All requested groups complete ==="
+log "    Collect results: python scripts/collect_grid_results.py --log_dir $LOG_DIR"
