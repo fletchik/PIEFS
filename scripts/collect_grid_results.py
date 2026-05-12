@@ -52,10 +52,11 @@ def load_run(run_dir: Path) -> dict | None:
 KNOWN_DATASETS = [
     'two_moon', 'circles', 'htru2', 'mnist_mc', 'mnist_binary',
     'fashion_mnist', 'cifar10_features', 'spotify_mc', 'spotify_bin',
-    'lissajous', 'cifar10_binary',
+    'cifar10_binary',
 ]
 KNOWN_METRICS = [
-    'off', 'diag', 'lambda_u_sparse', 'lambda_u_pinn', 'lambda_u_trotter',
+    'off', 'diag', 'conformal', 'global_low_rank', 'local_low_rank',
+    'fisher_diag', 'lambda_u_trotter',
 ]
 
 

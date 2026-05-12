@@ -281,12 +281,6 @@ def _build_datasets(ds_cfg):
         )
         return SklearnDataset(split='train', **kwargs), SklearnDataset(split='val', **kwargs)
 
-    if name == 'lissajous':
-        from src.dataset.lissajous import LissajousDataset
-
-        kwargs = dict(n_samples=ds_cfg.n_samples, train_fraction=ds_cfg.train_fraction)
-        return LissajousDataset(split='train', **kwargs), LissajousDataset(split='val', **kwargs)
-
     if name == 'htru2':
         from src.dataset.htru2 import HTRU2Dataset
 

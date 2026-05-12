@@ -42,7 +42,6 @@ python train.py run_id=exp05 dataset=circles trainer.total_steps=10000 trainer.b
 |-------------------|-------------------------------------|-----------|
 | `two_moon`        | sklearn make_moons (10k samples)    | 2         |
 | `circles`         | sklearn make_circles (10k samples)  | 2         |
-| `lissajous`       | Unit circle (50k samples)           | 2         |
 | `htru2`           | HTRU2 pulsar detection (17898)      | 8         |
 | `mnist_binary`    | MNIST 0-vs-1 (flat pixels)          | 784       |
 | `mnist_multiclass`| MNIST 10 classes (flat pixels)      | 784       |
