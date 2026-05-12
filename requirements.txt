@@ -1,4 +1,4 @@
-# EFDO — Eigenfunction Decomposition Operator
+# PIEFS — Physics-Informed Eigenfunction Features with Learnable Scaling
 # Python 3.12+ required (match/case pattern in src/model/metric/metric_net.py)
 torch>=2.0
 torchvision>=0.15

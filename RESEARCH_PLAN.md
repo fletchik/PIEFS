@@ -296,7 +296,7 @@ wandb login   # один раз
 if cfg.logging.wandb:
     import wandb
     wandb.init(
-        project="efdo-ai4physics",
+        project="piefs-cikm2026",
         name=run_id,
         config=OmegaConf.to_container(cfg, resolve=True),
         tags=[ds_name, metric_type, weighting_mode],
@@ -304,7 +304,7 @@ if cfg.logging.wandb:
     # Хук в trainer'е: wandb.log({...}, step=global_step)
 
 # 3. Public link
-# https://wandb.ai/<your-username>/efdo-ai4physics
+# https://wandb.ai/<your-username>/piefs-cikm2026
 # Settings → Privacy → Public — можно делиться URL'ом
 ```
 
@@ -452,8 +452,8 @@ python3 -c "import torch; print(torch.cuda.is_available(), torch.cuda.device_cou
 python train.py run_id=mnist_mc_off_gpu_s42 dataset=mnist_multiclass model.metric_type=off device=cuda
 
 # 3. На Kaggle — загрузить код через GitHub:
-# - В Kaggle notebook: !git clone https://github.com/<user>/efdo
-# - !cd efdo && pip install -r requirements.txt
+# - В Kaggle notebook: !git clone https://github.com/fletchik/PIEFS
+# - !cd PIEFS && pip install -r requirements.txt
 # - !python train.py run_id=... device=cuda
 ```
 

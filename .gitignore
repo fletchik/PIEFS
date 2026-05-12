@@ -62,9 +62,10 @@ paper_0/*.fdb_latexmk
 paper_0/*.synctex.gz
 paper_0/*.toc
 
-# ── Archive binaries and paper drafts (not needed for code review) ───
+# ── Archive: old session docs and paper drafts (not needed for code review) ──
 archive/efdo_source.zip
 archive/paper_drafts/
+archive/docs_old/
 
 # ── IDE ──────────────────────────────────────────────────────────────
 .idea/
@@ -77,5 +78,4 @@ archive/paper_drafts/
 *.ipynb
 
 # ── Deprecated top-level dirs ────────────────────────────────────────
-EFDO/
 articles/
