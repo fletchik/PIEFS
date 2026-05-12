@@ -1,0 +1,10 @@
+# ConformalMetric: A(x) = σ(x)·I — isotropic x-dependent scaling.
+# Simplest non-trivial x-dependent metric: one scalar per point.
+# Use as ablation between 'off' (no x-dep) and 'diag' (x-dep + anisotropy).
+#
+# If conformal > off: x-dependent scaling helps.
+# If diag >> conformal: directional structure (anisotropy) is key.
+# If conformal ≈ diag: pure scaling is enough, no rotation needed.
+
+metric_type: conformal
+normalize_det: false   # true = volume-preserving (det(A)=1); false = free scaling

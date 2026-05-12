@@ -41,9 +41,13 @@ model:
   task: binary               # "binary" or "multiclass"
   output_bias: false         # False = new experiments; True = backward-compat with old checkpoints
 
-  # GlobalLowRankMetric parameters (used only when metric_type='global_low_rank')
-  low_rank_r: 16             # rank of perturbation; recommended = num_classes - 1
+  # Low-rank metric parameters (global_low_rank and local_low_rank)
+  low_rank_r: 8              # rank of perturbation; recommended = num_classes - 1
+                             # binary: 1, MNIST-10: 9, CIFAR-10: 9, 20news-20: 19
   low_rank_init_scale: 0.01  # U, V init std; 0.0 = exact identity start
+
+  # Conformal / FisherDiag: normalize A so det(A) = 1 (volume-preserving)?
+  normalize_det: false        # false = free scaling (recommended)
 
 # Three-phase curriculum scheduling for MDE term.
 # Phase 1 (0 → phase1_end_step):    w_mde = 0  (basis trains as EFDO-off)

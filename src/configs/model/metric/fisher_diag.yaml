@@ -1,0 +1,18 @@
+# FisherDiagMetric: A(x) = diag(sqrt(F_diag(x)))
+# Diagonal Fisher Information Metric approximation.
+#
+# Theoretical motivation (Amari 1985 / Information Geometry):
+#   If M = Fisher Information Matrix, top-K eigenfunctions achieve
+#   minimum Bayes error rate among K-dimensional linear classifiers.
+#   This is the "Connection Lemma": FIM metric → sufficient statistics.
+#
+# Practical: full FIM is O(d²), impractical for d=784.
+#   We use diagonal approx: A(x) = sqrt(F_diag(x)) from a learned MLP.
+#   The MLP learns to output high values in directions that change
+#   the classifier output most.
+#
+# normalize_det: false (recommended) — FIM naturally has different
+#   information content per dimension; don't force det=1.
+
+metric_type: fisher_diag
+normalize_det: false

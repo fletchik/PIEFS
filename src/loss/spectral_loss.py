@@ -16,15 +16,16 @@ class SpectralDirichletLoss(nn.Module):
 
     Dynamic mode (dynamic_weighting=True, paper eq. 9-10):
         w_gram_eff   = w_gram   (always active)
-        w_task_eff   = w_task  * exp(-gram_error² / t_orth)
-        w_mde_eff    = w_dirichlet * exp(-max(gram_error²/t_orth, L_task/t_class))
+        w_task_eff   = w_task  * exp(-ratio_gram / t_orth)
+        w_mde_eff    = w_dirichlet * exp(-max(ratio_gram/t_orth, L_task/t_class))
         total = w_gram_eff*L_gram + w_task_eff*L_task + w_mde_eff*L_dir
 
-        Note: ratio_gram uses gram_error**2 (= L_gram = ||C-I||_F²), matching
-        the original paper eq. 10 where w_class ∝ exp(-L_orth/T_orth) and
-        L_orth = ||C-I||_F² (squared Frobenius norm). Using gram_error (not
-        squared) suppresses the classifier ~10-12× more aggressively than
-        intended, preventing the MDE term from ever activating.
+        The key question: what is ratio_gram?
+        - use_gram_squared=True  (default, FIXED):   ratio_gram = ||C-I||_F²
+          Matches paper eq. 10 where L_orth = ||C-I||_F² (squared Frobenius norm).
+        - use_gram_squared=False (ORIGINAL, ICML baseline): ratio_gram = ||C-I||_F
+          Original buggy code — suppresses w_task ~10-12× more than intended,
+          preventing MDE from ever activating. Kept as option for comparison.
 
         Weights are computed stop-gradient (paper eq. 9: sg(w)), so gradients
         flow only through the loss terms, not through the weight values.
@@ -34,8 +35,14 @@ class SpectralDirichletLoss(nn.Module):
         w_dirichlet: Base weight for Dirichlet energy term.
         w_task: Base weight for task (classification) term.
         dynamic_weighting: If True, use adaptive weighting from paper eq. 10.
-        t_orth: Target gram_error² = ||C-I||_F² for dynamic weighting.
+        t_orth: Target for dynamic weighting denominator.
+            If use_gram_squared=True:  interpreted as target ||C-I||_F².
+            If use_gram_squared=False: interpreted as target ||C-I||_F.
         t_class: Target task loss for dynamic weighting.
+        use_gram_squared: If True (default), use gram_error²=||C-I||_F² in the
+            exponent — matches the paper formula. If False, use gram_error=||C-I||_F
+            (original ICML submission code, kept for fair comparison/ablation).
+            Set criterion.use_gram_squared=false in YAML to reproduce the bug.
         phase1_end_step: Step at which Phase 1 ends and metric ramp begins.
             Phase 1 (0 → phase1_end_step): w_mde = 0 (basis trains without
             metric interference, equivalent to EFDO-off).
@@ -54,6 +61,7 @@ class SpectralDirichletLoss(nn.Module):
         dynamic_weighting: bool = False,
         t_orth: float = 0.1,
         t_class: float = 0.5,
+        use_gram_squared: bool = True,
         phase1_end_step: int = 0,
         phase2_end_step: int = 0,
     ) -> None:
@@ -64,6 +72,7 @@ class SpectralDirichletLoss(nn.Module):
         self.dynamic_weighting = dynamic_weighting
         self.t_orth = t_orth
         self.t_class = t_class
+        self.use_gram_squared = use_gram_squared
         self.phase1_end_step = phase1_end_step
         self.phase2_end_step = phase2_end_step
 
@@ -165,12 +174,16 @@ class SpectralDirichletLoss(nn.Module):
                 # Ratios: how far each loss is from its target.
                 # ratio > 1 → loss still far from target → weight suppressed.
                 # ratio < 1 → loss near/below target → weight activates.
-                # BUG-FIX: use gram_error**2 (= L_gram = ||C-I||_F²) to match
-                # original paper eq. 10: w_class ∝ exp(-L_orth/T_orth) where
-                # L_orth is the squared Frobenius norm, not the norm itself.
-                # Using gram_error (not squared) over-suppresses w_task by
-                # ~10-12×, preventing MDE from ever receiving gradient signal.
-                ratio_gram = (gram_error ** 2) / self.t_orth   # scalar (fixed)
+                # ratio_gram: controls suppression of w_task and w_mde.
+                # use_gram_squared=True  (default): ratio = ||C-I||_F² / t_orth
+                #   Matches paper eq. 10 where L_orth = ||C-I||_F² (squared).
+                # use_gram_squared=False (ICML original): ratio = ||C-I||_F / t_orth
+                #   The original bug — over-suppresses w_task by ~10-12×.
+                #   Kept as ablation option: set criterion.use_gram_squared=false.
+                if self.use_gram_squared:
+                    ratio_gram = (gram_error ** 2) / self.t_orth   # fixed (paper-correct)
+                else:
+                    ratio_gram = gram_error / self.t_orth           # original ICML code
                 # When w_task=0 (unsupervised), ignore task ratio so MDE
                 # activates based on gram convergence only (ratio_class=0).
                 if self.w_task > 0:

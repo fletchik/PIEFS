@@ -84,8 +84,9 @@ def main(cfg: DictConfig) -> None:
         input_dim=input_dim,
         hidden_dims=list(cfg.model.metric_hidden_dims),
         pinn_hidden_dims=list(cfg.model.get('pinn_hidden_dims', [128, 128, 128])),
-        low_rank_r=int(cfg.model.get('low_rank_r', 16)),
+        low_rank_r=int(cfg.model.get('low_rank_r', 8)),
         low_rank_init_scale=float(cfg.model.get('low_rank_init_scale', 0.01)),
+        normalize_det=bool(cfg.model.get('normalize_det', False)),
     )
     if metric is not None:
         metric = metric.to(device)
@@ -116,6 +117,9 @@ def main(cfg: DictConfig) -> None:
         dynamic_weighting=cfg.criterion.get('dynamic_weighting', False),
         t_orth=cfg.criterion.get('t_orth', 0.1),
         t_class=cfg.criterion.get('t_class', 0.5),
+        # use_gram_squared=True  (default): ratio = ||C-I||_F² / t_orth  [paper-correct]
+        # use_gram_squared=False (ablation): ratio = ||C-I||_F  / t_orth  [original ICML bug]
+        use_gram_squared=bool(cfg.criterion.get('use_gram_squared', True)),
         phase1_end_step=_p1,
         phase2_end_step=_p2,
     )

@@ -1,0 +1,17 @@
+# LocalLowRankMetric: A(x) = I + U(x)·Λ(x)·V(x)ᵀ
+# x-dependent rank-r perturbation of identity.
+# Unlike Trotter: covers full rank-r subspace (no subgroup restriction).
+# Unlike GlobalLowRank: locally adaptive (different A per region).
+#
+# Key parameters:
+#   low_rank_r: rank of perturbation. Recommended = num_classes - 1.
+#               MNIST (10 classes) → 9; binary → 1; CIFAR-10 → 9.
+#   low_rank_init_scale: std for U/V head init. 0.0 = exact identity; 0.01 default.
+#
+# Use with three-phase curriculum (recommended):
+#   curriculum.phase1_end_step: 30000   # 50% of 60k run
+#   curriculum.phase2_end_step: 45000   # 75% of 60k run
+
+metric_type: local_low_rank
+low_rank_r: 8                   # safe default; tune to num_classes-1 per dataset
+low_rank_init_scale: 0.01       # near-identity init, nonzero grad from step 1

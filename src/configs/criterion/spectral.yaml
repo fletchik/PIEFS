@@ -4,10 +4,16 @@ w_dirichlet: 1.0   # ||A(x)∇φ||² — MDE (Dirichlet energy)
 w_task: 1.0        # BCE or CE — supervised classification
 
 # Dynamic weighting (paper eq. 10)
-# w_task_eff  = w_task  * exp(-gram_error / t_orth)
-# w_mde_eff   = w_dirichlet * exp(-max(gram_error/t_orth, task_loss/t_class))
+# w_task_eff  = w_task  * exp(-ratio_gram / t_orth)
+# w_mde_eff   = w_dirichlet * exp(-max(ratio_gram/t_orth, task_loss/t_class))
 # w_gram stays at w_gram always.
 # Set dynamic_weighting: true to match the paper. false = fixed weights (ablation).
 dynamic_weighting: true
-t_orth: 0.1    # target gram_error = ||C-I||_F; task loss activates below this
+t_orth: 0.1    # target for ratio_gram denominator (see use_gram_squared)
 t_class: 0.5   # target task loss (CE); Dirichlet activates when both are below targets
+
+# use_gram_squared controls what ratio_gram is:
+#   true  (default, FIXED):    ratio_gram = ||C-I||_F²  — matches paper eq.10
+#   false (ORIGINAL/ablation): ratio_gram = ||C-I||_F   — original ICML bug
+# Run with false to reproduce ICML baseline; compare with true for the paper.
+use_gram_squared: true
