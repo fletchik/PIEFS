@@ -1,0 +1,10 @@
+# CIFAR-10 10-class multiclass (flat pixels, 3072 features)
+# Same as cifar10_binary.yaml but task=multiclass, all 10 classes.
+# Data downloaded automatically to data/cifar10/ on first use.
+name: cifar10
+root: data/cifar10
+task: multiclass
+val_fraction: 0.1
+standardize: true
+input_dim: 3072
+num_classes: 10

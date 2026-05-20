@@ -23,8 +23,7 @@ set -euo pipefail
 
 # ── Python interpreter ──────────────────────────────────────
 # Walk up from the project root looking for a .venv, then fall back to
-# PYTHON env-var or system python3. This handles both a checkout at the
-# repo root and a git-worktree layout (project root inside .claude/worktrees/).
+# PYTHON env-var or system python3.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PYTHON=""
