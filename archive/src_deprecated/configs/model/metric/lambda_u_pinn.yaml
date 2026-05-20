@@ -1,6 +1,0 @@
-# Full metric A(x) = U(x)·Λ(x), U approximated by a pretrained PINN
-metric_type: lambda_u_pinn
-metric_hidden_dims: [64, 64]
-pinn_hidden_dims: [128, 128, 128]
-pinn_pretrain_steps: 5000
-pinn_pretrain_lr: 0.001

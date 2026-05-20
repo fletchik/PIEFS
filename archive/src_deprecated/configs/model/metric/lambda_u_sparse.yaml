@@ -1,3 +1,0 @@
-# Full metric A(x) = U(x)·Λ(x), U = expm(sparse skew-symmetric ω)
-metric_type: lambda_u_sparse
-metric_hidden_dims: [64, 64]
