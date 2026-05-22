@@ -58,8 +58,8 @@ python scripts/eval_from_checkpoint.py \
 
 Validation accuracy (%) averaged over 5 seeds, K=10 eigenfunctions. **Bold** = best per dataset.
 
-| Dataset    | off | diag | conformal | global\_low\_rank | local\_low\_rank |
-|------------|-----|------|-----------|-------------------|-----------------|
+| Dataset    | off | diag | lambda\_u\_trotter | global\_low\_rank | local\_low\_rank |
+|------------|-----|------|-------------------|-------------------|-----------------|
 | Two Moons  | 100.00 | 99.99 | 100.00 | 100.00 | 100.00 |
 | Circles    | 81.49 ± 11.92 | 85.56 ± 3.79 | 92.08 ± 3.68 | 95.75 ± 1.85 | **97.55 ± 0.28** |
 | HTRU2      | 97.34 | 97.48 | **97.73** | 97.68 | 97.71 |

@@ -119,12 +119,12 @@ fi
 # D1 — Metric ablation on 2D datasets (~3 h, 20 runs)
 # All 5 metrics on two_moon and circles; 2 seeds each
 # Goal: eigenfunction visualizations for the paper
-# Expected: global_low_rank ≥ conformal > diag > off
+# Expected: global_low_rank ≥ lambda_u_trotter > diag > off
 # ============================================================
 if [[ "$GROUP" == "D1" || "$GROUP" == "all" ]]; then
     log "=== D1: Metric ablation — two_moon + circles ==="
     for DATASET in two_moon circles; do
-        for MTYPE in off diag conformal global_low_rank local_low_rank; do
+        for MTYPE in off diag lambda_u_trotter global_low_rank local_low_rank; do
             EXTRA=""
             if [[ "$MTYPE" == "global_low_rank" || "$MTYPE" == "local_low_rank" ]]; then
                 EXTRA="model.low_rank_r=1"   # binary: r = C-1 = 1
@@ -171,7 +171,7 @@ fi
 # ============================================================
 if [[ "$GROUP" == "D2" || "$GROUP" == "all" ]]; then
     log "=== D2: Main table — htru2, 5 metrics ==="
-    for MTYPE in off diag conformal global_low_rank local_low_rank; do
+    for MTYPE in off diag lambda_u_trotter global_low_rank local_low_rank; do
         EXTRA=""
         if [[ "$MTYPE" == "global_low_rank" ]]; then
             EXTRA="model.low_rank_r=1 curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000"
@@ -199,7 +199,7 @@ fi
 if [[ "$GROUP" == "D6" || "$GROUP" == "all" ]]; then
     log "=== D6: Main table — MNIST multiclass, 5 metrics ==="
     log "    [!] This is long — GPU recommended."
-    for MTYPE in off diag conformal global_low_rank local_low_rank; do
+    for MTYPE in off diag lambda_u_trotter global_low_rank local_low_rank; do
         EXTRA=""
         if [[ "$MTYPE" == "global_low_rank" ]]; then
             EXTRA="model.low_rank_r=9 curriculum.phase1_end_step=30000 curriculum.phase2_end_step=45000"
