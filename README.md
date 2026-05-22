@@ -37,6 +37,23 @@ Available `metric_type`: `off`, `diag`, `lambda_u_trotter`, `global_low_rank`, `
 python scripts/eval_from_checkpoint.py --checkpoint logs/exp01/checkpoint_final.pt --split test
 ```
 
+## Pretrained checkpoints
+
+Checkpoints for 5 datasets × 5 metric types (seed 0, best validation accuracy) are available in [Releases](https://github.com/fletchik/PIEFS/releases/tag/v1.0).
+
+Download all at once:
+
+```bash
+bash scripts/download_checkpoints.sh        # saves to checkpoints/
+```
+
+Then evaluate:
+
+```bash
+python scripts/eval_from_checkpoint.py \
+    --checkpoint checkpoints/htru2_global_low_rank.pt --split test
+```
+
 ## Results
 
 Validation accuracy (%) averaged over 5 seeds, K=10 eigenfunctions. **Bold** = best per dataset.

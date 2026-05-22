@@ -1,0 +1,20 @@
+# Downloaded checkpoints (use scripts/download_checkpoints.sh)
+checkpoints/
+
+# Training logs and outputs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# Hydra / output dirs
+outputs/
+multirun/
+.hydra/
+
+# OS
+.DS_Store
